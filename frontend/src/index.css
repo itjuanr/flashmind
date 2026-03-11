@@ -1,0 +1,122 @@
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap');
+@import "tailwindcss";
+
+/* ── Variáveis de tema ── */
+:root {
+  --bg:           #0A0A0F;
+  --bg2:          #0F0F18;
+  --surface:      rgba(255,255,255,0.028);
+  --border:       rgba(255,255,255,0.06);
+  --text:         #e2e8f0;
+  --text-muted:   #64748b;
+  --text-faint:   #334155;
+  --glass-bg:     rgba(255,255,255,0.028);
+  --input-bg:     rgba(255,255,255,0.04);
+  --input-border: rgba(255,255,255,0.08);
+}
+
+[data-theme="light"] {
+  --bg:           #F0F2F8;
+  --bg2:          #E4E8F2;
+  --surface:      rgba(255,255,255,0.7);
+  --border:       rgba(0,0,0,0.08);
+  --text:         #1e293b;
+  --text-muted:   #64748b;
+  --text-faint:   #94a3b8;
+  --glass-bg:     rgba(255,255,255,0.6);
+  --input-bg:     rgba(0,0,0,0.03);
+  --input-border: rgba(0,0,0,0.08);
+}
+
+@layer base {
+  * { box-sizing: border-box; }
+
+  body {
+    background-color: var(--bg);
+    color: var(--text);
+    @apply antialiased;
+    font-family: 'DM Sans', sans-serif;
+    transition: background-color 0.3s, color 0.3s;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: 'Syne', sans-serif;
+  }
+}
+
+/* Glassmorphism — adapta ao tema */
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+[data-theme="light"] .glass {
+  background: rgba(255,255,255,0.65);
+  box-shadow: 0 2px 16px rgba(0,0,0,0.06);
+}
+
+/* ── Utilitários semânticos de texto ──
+   Usam var() então trocam automaticamente com o tema */
+.t-base   { color: var(--text); }
+.t-muted  { color: var(--text-muted); }
+.t-faint  { color: var(--text-faint); }
+
+/* Corrige text-white e text-slate-* no tema claro */
+[data-theme="light"] .text-white          { color: #1e293b !important; }
+[data-theme="light"] .text-slate-200      { color: #334155 !important; }
+[data-theme="light"] .text-slate-300      { color: #475569 !important; }
+[data-theme="light"] .text-slate-400      { color: #64748b !important; }
+[data-theme="light"] .text-slate-500      { color: #94a3b8 !important; }
+[data-theme="light"] .text-slate-600      { color: #94a3b8 !important; }
+
+/* Superfícies e bordas no light */
+[data-theme="light"] .border-white\/5,
+[data-theme="light"] .border-white\/8,
+[data-theme="light"] .border-white\/10,
+[data-theme="light"] .border-white\/15 { border-color: rgba(0,0,0,0.08) !important; }
+
+[data-theme="light"] .bg-white\/4,
+[data-theme="light"] .bg-white\/5,
+[data-theme="light"] .bg-white\/8       { background-color: rgba(0,0,0,0.04) !important; }
+
+[data-theme="light"] .bg-white\/10      { background-color: rgba(0,0,0,0.07) !important; }
+
+/* Hover no light */
+[data-theme="light"] .hover\:bg-white\/5:hover  { background-color: rgba(0,0,0,0.05) !important; }
+[data-theme="light"] .hover\:bg-white\/8:hover  { background-color: rgba(0,0,0,0.07) !important; }
+[data-theme="light"] .hover\:bg-white\/10:hover { background-color: rgba(0,0,0,0.08) !important; }
+[data-theme="light"] .hover\:text-white:hover   { color: #0f172a !important; }
+
+/* Input e textarea no light */
+[data-theme="light"] input,
+[data-theme="light"] textarea {
+  color: #1e293b;
+  background-color: rgba(0,0,0,0.03);
+  border-color: rgba(0,0,0,0.08);
+}
+[data-theme="light"] input::placeholder,
+[data-theme="light"] textarea::placeholder { color: #94a3b8; }
+
+/* Cards de deck e modais no light */
+[data-theme="light"] .bg-\[#0A0A0F\] { background-color: var(--bg) !important; }
+[data-theme="light"] .bg-\[#0F0F18\] { background-color: var(--bg2) !important; }
+
+/* Corrige texto do card virado (verso) no tema claro */
+[data-theme="light"] .card-back-text { color: #1e293b !important; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(128,128,128,0.2); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(128,128,128,0.35); }
+
+/* Seleção de texto */
+::selection { background: rgba(79,142,247,0.25); color: var(--text); }
+
+/* Animação dos toasts */
+@keyframes slide-in {
+  from { opacity: 0; transform: translateX(20px) scale(0.95); }
+  to   { opacity: 1; transform: translateX(0) scale(1); }
+}
+.animate-slide-in { animation: slide-in 0.2s ease-out forwards; }
