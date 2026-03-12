@@ -110,7 +110,7 @@ function DeckModal({ onClose, onSaved, editing, toast }) {
   }`;
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
       <div className={`w-full max-w-md ${surface} rounded-3xl border ${isDark ? 'border-white/10' : 'border-black/8'} flex flex-col`} style={{ maxHeight: '90vh' }}>
         {/* Header fixo */}
         <div className={`flex items-center justify-between px-8 pt-7 pb-4 border-b ${isDark ? 'border-white/8' : 'border-black/6'} flex-shrink-0`}>
@@ -268,7 +268,7 @@ function DeckModal({ onClose, onSaved, editing, toast }) {
 function OnboardingModal({ onClose, onCreateFirst }) {
   const { isDark } = useTheme ? useTheme() : { isDark: true };
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
       <div className="w-full max-w-sm bg-[#0F0F18] rounded-3xl border border-white/10 p-8 text-center">
         <div className="text-5xl mb-4">🧠</div>
         <h2 className="text-white font-bold text-xl mb-2">Bem-vindo ao FlashMind!</h2>
@@ -457,7 +457,7 @@ export default function Dashboard() {
 
       {/* Modal confirmar reset */}
       {confirmReset && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
           <div className="w-full max-w-sm glass rounded-3xl border border-white/10 p-8 text-center">
             <div className="text-4xl mb-4">🔄</div>
             <h3 className="text-white font-bold text-lg mb-2">Resetar histórico?</h3>
@@ -476,7 +476,7 @@ export default function Dashboard() {
 
       {/* Modal confirmar exclusão */}
       {confirmDelete && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
           <div className="w-full max-w-sm glass rounded-3xl border border-white/10 p-8 text-center">
             <div className="text-4xl mb-4">🗑️</div>
             <h3 className="text-white font-bold text-lg mb-2">Excluir deck?</h3>
@@ -748,7 +748,7 @@ export default function Dashboard() {
         onDragLeave={() => setDragOverQueue(false)}
         onDrop={handleQueueDrop}
       >
-        <div className={`mx-4 mb-4 px-6 py-4 rounded-2xl border-2 border-dashed transition-all text-center ${dragOverQueue ? 'border-blue-400 bg-blue-500/15' : isDark ? 'border-white/20 bg-[#0A0A0F]/90 backdrop-blur-md' : 'border-black/15 bg-white/90 backdrop-blur-md'}`}>
+        <div className={`mx-4 mb-4 px-6 py-4 rounded-2xl border-2 border-dashed transition-all text-center ${dragOverQueue ? 'border-blue-400 bg-blue-500/15' : isDark ? 'border-white/20 bg-[#0A0A0F]/90' : 'border-black/15 bg-white/90'}`}>
           <p className={`text-sm font-semibold flex items-center justify-center gap-2 ${dragOverQueue ? 'text-blue-400' : 'text-slate-500'}`}>
             <ListOrdered size={16} />
             {dragOverQueue ? 'Solte para adicionar à fila' : 'Solte aqui para adicionar à fila de estudo'}

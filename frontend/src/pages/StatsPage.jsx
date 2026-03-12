@@ -80,7 +80,7 @@ function ResetModal({ onClose, onReset, isDark }) {
   const mutedText = isDark ? 'text-slate-400' : 'text-slate-600';
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
       <div className={`w-full max-w-md rounded-3xl border shadow-2xl ${surface} overflow-hidden`}>
 
         {/* Header */}

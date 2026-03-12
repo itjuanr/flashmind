@@ -47,8 +47,9 @@
 /* Glassmorphism — adapta ao tema */
 .glass {
   background: var(--glass-bg);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  will-change: transform;
 }
 
 [data-theme="light"] .glass {
@@ -146,3 +147,27 @@
   to   { opacity: 1; transform: scale(1); }
 }
 .animate-redirect-in { animation: redirect-in 0.35s ease-out forwards; }
+
+/* ── Performance ─────────────────────────────────────────────────────────── */
+/* Força compositing layer para elementos que animam — evita repaint */
+.glass,
+[class*="transition-"],
+[class*="animate-"] {
+  transform: translateZ(0);
+}
+
+/* Scroll suave em todos os containers com overflow */
+* {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Modais — isolamento de compositing para não afetar o fundo */
+[class*="fixed inset-0"] {
+  isolation: isolate;
+}
+
+/* Desativa pointer events em elementos decorativos (blobs de fundo) */
+.pointer-events-none {
+  contain: strict;
+}

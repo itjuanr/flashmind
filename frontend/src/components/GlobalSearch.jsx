@@ -79,7 +79,7 @@ export default function GlobalSearch() {
 
       {/* Modal de busca */}
       {open && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-start justify-center pt-24 px-4">
+        <div className="fixed inset-0 bg-black/75 z-[100] flex items-start justify-center pt-24 px-4">
           <div ref={wrapRef} className={`w-full max-w-lg rounded-2xl border shadow-2xl overflow-hidden ${isDark ? 'bg-[#0F0F18] border-white/10' : 'bg-white border-black/8'}`}>
             {/* Input */}
             <div className={`flex items-center gap-3 px-4 py-3.5 border-b ${isDark ? 'border-white/8' : 'border-black/6'}`}>

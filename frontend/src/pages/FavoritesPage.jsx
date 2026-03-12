@@ -321,7 +321,7 @@ export default function FavoritesPage() {
 
       {/* ── Barra de estudar selecionados ── */}
       {selectedCards.length > 0 && (
-        <div className={`fixed bottom-0 left-0 right-0 z-50 px-4 pb-4 pt-3 border-t ${isDark ? 'bg-[#0A0A0F]/95 border-white/8' : 'bg-white/95 border-black/8'} backdrop-blur-md`}>
+        <div className={`fixed bottom-0 left-0 right-0 z-50 px-4 pb-4 pt-3 border-t ${isDark ? 'bg-[#0A0A0F]/95 border-white/8' : 'bg-white/95 border-black/8'}`}>
           <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
             <p className={`text-sm font-medium ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
               {selectedCards.length} card{selectedCards.length > 1 ? 's' : ''} selecionado{selectedCards.length > 1 ? 's' : ''}

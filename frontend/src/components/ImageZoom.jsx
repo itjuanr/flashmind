@@ -10,7 +10,7 @@ export function ImageZoom({ src, onClose }) {
 
   return (
     <div
-      className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[200] flex items-center justify-center p-6 cursor-zoom-out"
+      className="fixed inset-0 bg-black/92 z-[200] flex items-center justify-center p-6 cursor-zoom-out"
       onClick={onClose}
     >
       <button onClick={onClose} className="absolute top-4 right-4 p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-all">

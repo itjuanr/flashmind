@@ -3,8 +3,8 @@ const mongoose = require('mongoose');
 const FlashcardSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   deckId: { type: mongoose.Schema.Types.ObjectId, ref: 'Deck', required: true },
-  front: { type: String, required: true },
-  back: { type: String, required: true },
+  front: { type: String, default: '' },
+  back:  { type: String, default: '' },
   frontImage: { type: String, default: null },
   backImage:  { type: String, default: null },
   frontAudio: { type: String, default: null }, // Base64 ou URL

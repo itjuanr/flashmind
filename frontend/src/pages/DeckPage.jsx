@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback, memo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import Navbar from '../components/Navbar';
@@ -70,81 +70,89 @@ function ImagePicker({ value, onChange, label }) {
 }
 
 // ─── CardModal (criar/editar) — com campo notas ───────────────────────────────
+// Memo evita re-render do ImagePicker quando texto do form muda
+const ImagePickerMemo = memo(ImagePicker);
+const AudioPickerMemo = memo(AudioPicker);
+
 function CardModal({ onClose, onSaved, deckId, editing, toast, isDark }) {
-  const [form, setForm] = useState({
-    front:      editing?.front      || '',
-    back:       editing?.back       || '',
-    frontImage: editing?.frontImage || null,
-    backImage:  editing?.backImage  || null,
-    frontAudio: editing?.frontAudio || null,
-    backAudio:  editing?.backAudio  || null,
-    notes:      editing?.notes      || '',
-  });
-  const [loading, setLoading]     = useState(false);
-  const [error, setError]         = useState('');
+  // Campos de texto ficam em refs — sem re-render a cada tecla
+  const frontRef = useRef(editing?.front || '');
+  const backRef  = useRef(editing?.back  || '');
+  const notesRef = useRef(editing?.notes || '');
+
+  // Só mídia e estados visuais ficam em state (mudam raramente)
+  const [frontImage, setFrontImage] = useState(editing?.frontImage || null);
+  const [backImage,  setBackImage]  = useState(editing?.backImage  || null);
+  const [frontAudio, setFrontAudio] = useState(editing?.frontAudio || null);
+  const [backAudio,  setBackAudio]  = useState(editing?.backAudio  || null);
+
+  const [loading,   setLoading]   = useState(false);
+  const [error,     setError]     = useState('');
   const [showNotes, setShowNotes] = useState(!!(editing?.notes));
 
-  // Garante que o form reflete o card sendo editado (inclui áudio)
-  useEffect(() => {
-    if (editing) {
-      setForm({
-        front:      editing.front      || '',
-        back:       editing.back       || '',
-        frontImage: editing.frontImage || null,
-        backImage:  editing.backImage  || null,
-        frontAudio: editing.frontAudio || null,
-        backAudio:  editing.backAudio  || null,
-        notes:      editing.notes      || '',
-      });
-      setShowNotes(!!(editing.notes));
-    }
-  }, [editing?._id]);
+  // Contador de palavras — só atualiza no blur, não a cada tecla
+  const [frontStats, setFrontStats] = useState({ words: 0, chars: editing?.front?.length || 0 });
+  const [backStats,  setBackStats]  = useState({ words: 0, chars: editing?.back?.length  || 0 });
+  const calcStats = (str) => ({ words: str.trim().split(/\s+/).filter(Boolean).length, chars: str.trim().length });
 
-  const charCount = (str) => str.trim().length;
-  const wordCount = (str) => str.trim().split(/\s+/).filter(Boolean).length;
+  // Callbacks estáveis — não recria os filhos
+  const handleFrontImage = useCallback((v) => setFrontImage(v), []);
+  const handleBackImage  = useCallback((v) => setBackImage(v),  []);
+  const handleFrontAudio = useCallback((v) => setFrontAudio(v), []);
+  const handleBackAudio  = useCallback((v) => setBackAudio(v),  []);
+
+  // Sincroniza quando troca de card editado
+  useEffect(() => {
+    if (!editing) return;
+    frontRef.current = editing.front || '';
+    backRef.current  = editing.back  || '';
+    notesRef.current = editing.notes || '';
+    setFrontImage(editing.frontImage || null);
+    setBackImage(editing.backImage   || null);
+    setFrontAudio(editing.frontAudio || null);
+    setBackAudio(editing.backAudio   || null);
+    setShowNotes(!!(editing.notes));
+  }, [editing?._id]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const front = frontRef.current;
+    const back  = backRef.current;
+    const notes = notesRef.current;
 
-    // Frente: precisa de texto OU imagem OU áudio
-    const frontOk = form.front.trim() || form.frontImage || form.frontAudio;
-    // Verso: precisa de texto OU imagem OU áudio
-    const backOk  = form.back.trim()  || form.backImage  || form.backAudio;
-
+    const frontOk = front.trim() || frontImage || frontAudio;
+    const backOk  = back.trim()  || backImage  || backAudio;
     if (!frontOk || !backOk) {
       setError(
-        !frontOk && !backOk
-          ? 'Adicione conteúdo na pergunta e na resposta (texto, imagem ou áudio).'
-          : !frontOk
-          ? 'A pergunta precisa de texto, imagem ou áudio.'
-          : 'A resposta precisa de texto, imagem ou áudio.'
+        !frontOk && !backOk ? 'Adicione conteúdo na pergunta e na resposta (texto, imagem ou áudio).'
+        : !frontOk ? 'A pergunta precisa de texto, imagem ou áudio.'
+        : 'A resposta precisa de texto, imagem ou áudio.'
       );
       return;
     }
 
     setLoading(true);
-
+    const payload = { front, back, notes, frontImage, backImage, frontAudio, backAudio };
     try {
       let res;
       if (editing) {
-        res = await api.put(`/flashcards/${editing._id}`, form);
+        res = await api.put(`/flashcards/${editing._id}`, payload);
         toast('Card atualizado!', 'success');
       } else {
-        res = await api.post('/flashcards', { ...form, deckId });
+        res = await api.post('/flashcards', { ...payload, deckId });
         toast('Flashcard criado!', 'success');
       }
       onSaved(res.data, !!editing);
       onClose();
     } catch (err) {
-      const msg = err.response?.data?.message || err.message || 'Erro ao salvar card.';
-      setError(msg);
+      setError(err.response?.data?.message || err.message || 'Erro ao salvar card.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
       <div className="w-full max-w-lg glass rounded-3xl border border-white/10 flex flex-col" style={{ maxHeight: '90vh' }}>
         {/* Header fixo */}
         <div className="flex items-center justify-between px-8 pt-7 pb-4 border-b border-white/8 flex-shrink-0">
@@ -156,7 +164,7 @@ function CardModal({ onClose, onSaved, deckId, editing, toast, isDark }) {
         </div>
         {/* Corpo com scroll interno */}
         <div className="overflow-y-auto flex-1 px-8 py-6">
-          {error && <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm px-4 py-3 rounded-xl mb-5">{error}</div>}
+          {error && <div className="animate-fade-in-down bg-red-500/10 border border-red-500/20 text-red-400 text-sm px-4 py-3 rounded-xl mb-5">{error}</div>}
           <form onSubmit={handleSubmit} className="space-y-6">
           {/* Frente */}
           <div className="space-y-3 p-4 rounded-2xl border border-white/6 bg-white/2">
@@ -164,14 +172,16 @@ function CardModal({ onClose, onSaved, deckId, editing, toast, isDark }) {
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest">Pergunta</label>
-                <span className="text-[10px] text-slate-600">{wordCount(form.front)} palavras · {charCount(form.front)} chars</span>
+                <span className="text-[10px] text-slate-600">{frontStats.words} palavras · {frontStats.chars} chars</span>
               </div>
               <textarea rows={2} placeholder="O que você quer memorizar?"
                 className="w-full bg-white/4 border border-white/8 focus:border-blue-500/50 px-4 py-3 rounded-xl outline-none transition-all text-white placeholder-slate-600 text-sm resize-none"
-                value={form.front} onChange={(e) => setForm({ ...form, front: e.target.value })} />
+                defaultValue={frontRef.current}
+                onChange={(e) => { frontRef.current = e.target.value; }}
+                onBlur={(e) => setFrontStats(calcStats(e.target.value))} />
             </div>
-            <ImagePicker label="Imagem (opcional)" value={form.frontImage} onChange={(v) => setForm({ ...form, frontImage: v })} />
-            <AudioPicker label="Áudio (opcional)" value={form.frontAudio} onChange={(v) => setForm({ ...form, frontAudio: v })} />
+            <ImagePickerMemo label="Imagem (opcional)" value={frontImage} onChange={handleFrontImage} />
+            <AudioPickerMemo label="Áudio (opcional)"  value={frontAudio} onChange={handleFrontAudio} />
           </div>
 
           {/* Verso */}
@@ -180,14 +190,16 @@ function CardModal({ onClose, onSaved, deckId, editing, toast, isDark }) {
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest">Resposta</label>
-                <span className="text-[10px] text-slate-600">{wordCount(form.back)} palavras · {charCount(form.back)} chars</span>
+                <span className="text-[10px] text-slate-600">{backStats.words} palavras · {backStats.chars} chars</span>
               </div>
               <textarea rows={2} placeholder="A resposta que deve aparecer ao virar."
                 className="w-full bg-white/4 border border-white/8 focus:border-blue-500/50 px-4 py-3 rounded-xl outline-none transition-all text-white placeholder-slate-600 text-sm resize-none"
-                value={form.back} onChange={(e) => setForm({ ...form, back: e.target.value })} />
+                defaultValue={backRef.current}
+                onChange={(e) => { backRef.current = e.target.value; }}
+                onBlur={(e) => setBackStats(calcStats(e.target.value))} />
             </div>
-            <ImagePicker label="Imagem (opcional)" value={form.backImage} onChange={(v) => setForm({ ...form, backImage: v })} />
-            <AudioPicker label="Áudio (opcional)" value={form.backAudio} onChange={(v) => setForm({ ...form, backAudio: v })} />
+            <ImagePickerMemo label="Imagem (opcional)" value={backImage}  onChange={handleBackImage} />
+            <AudioPickerMemo label="Áudio (opcional)"  value={backAudio}  onChange={handleBackAudio} />
           </div>
 
           {/* Anotações */}
@@ -202,7 +214,8 @@ function CardModal({ onClose, onSaved, deckId, editing, toast, isDark }) {
             {showNotes && (
               <textarea rows={3} placeholder="Dicas, contexto extra, macetes para lembrar..."
                 className="w-full bg-amber-500/5 border border-amber-500/15 focus:border-amber-500/40 px-4 py-3 rounded-xl outline-none transition-all text-slate-300 placeholder-slate-600 text-sm resize-none"
-                value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+                defaultValue={notesRef.current}
+                onChange={(e) => { notesRef.current = e.target.value; }} />
             )}
           </div>
 
@@ -396,7 +409,7 @@ export default function DeckPage() {
       {showImport && <CsvImportModal deckId={deckId} deckName={deck?.name||''} onClose={() => setShowImport(false)} onImported={handleImported} />}
 
       {confirmDeleteDeck && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
           <div className="w-full max-w-sm glass rounded-3xl border border-white/10 p-8 text-center">
             <div className="text-4xl mb-4">⚠️</div>
             <h3 className="text-white font-bold text-lg mb-2">Excluir deck?</h3>
@@ -414,7 +427,7 @@ export default function DeckPage() {
       )}
 
       {confirmDeleteCard && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
           <div className="w-full max-w-sm glass rounded-3xl border border-white/10 p-8 text-center">
             <div className="text-4xl mb-4">🗑️</div>
             <h3 className="text-white font-bold text-lg mb-2">Excluir flashcard?</h3>
