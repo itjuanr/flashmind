@@ -1,14 +1,24 @@
-import { useState } from 'react';
-import { Star, Pencil, Trash2, Volume2 } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Star, Pencil, Trash2, Volume2, Copy } from 'lucide-react';
 import { ZoomableImage } from './ImageZoom';
 
 function AudioBtn({ src, side }) {
   const [playing, setPlaying] = useState(false);
+  const audioRef = useRef(null);
   if (!src) return null;
+
   const toggle = (e) => {
     e.stopPropagation();
-    if (playing) { setPlaying(false); return; }
+    // Se já está tocando, para
+    if (audioRef.current && !audioRef.current.paused) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      setPlaying(false);
+      return;
+    }
+    // Cria nova instância só se não há uma rodando
     const a = new Audio(src);
+    audioRef.current = a;
     a.onended = () => setPlaying(false);
     a.onerror = () => setPlaying(false);
     a.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
@@ -24,7 +34,7 @@ function AudioBtn({ src, side }) {
   );
 }
 
-export default function FlashCard({ card, onFavorite, onEdit, onDelete }) {
+export default function FlashCard({ card, onFavorite, onEdit, onDuplicate, onDelete }) {
   const [flipped, setFlipped] = useState(false);
 
   return (
@@ -40,6 +50,12 @@ export default function FlashCard({ card, onFavorite, onEdit, onDelete }) {
           className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-white/10 transition-all">
           <Pencil size={14} />
         </button>
+        {onDuplicate && (
+          <button onClick={(e) => { e.stopPropagation(); onDuplicate?.(card); }}
+            className="p-2 rounded-lg text-slate-500 hover:text-blue-400 hover:bg-blue-500/10 transition-all" title="Duplicar card">
+            <Copy size={14} />
+          </button>
+        )}
         <button onClick={(e) => { e.stopPropagation(); onDelete?.(card); }}
           className="p-2 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all">
           <Trash2 size={14} />

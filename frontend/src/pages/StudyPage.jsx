@@ -5,13 +5,44 @@ import Navbar from '../components/Navbar';
 import { useToast } from '../context/ToastContext';
 import { useTheme } from '../context/ThemeContext';
 import { ZoomableImage } from '../components/ImageZoom';
-import AudioPicker from '../components/AudioPicker';
 import {
   ArrowLeft, RotateCcw, CheckCircle2, XCircle, X,
   RefreshCw, LayoutDashboard, Loader2, BookOpen,
   Star, Shuffle, AlignLeft, Timer, TimerOff, Maximize2, Minimize2,
-  Pencil, Volume2,
+  Pencil, Volume2, CheckSquare, Square, ListChecks,
 } from 'lucide-react';
+
+// ─── Botão de áudio para o StudyPage ─────────────────────────────────────────
+function AudioPlayBtn({ src, side, onClick }) {
+  const [playing, setPlaying] = useState(false);
+  const audioRef = useRef(null);
+  if (!src) return null;
+
+  const toggle = (e) => {
+    if (onClick) onClick(e);
+    // Se já está tocando, para
+    if (audioRef.current && !audioRef.current.paused) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      setPlaying(false);
+      return;
+    }
+    const a = new Audio(src);
+    audioRef.current = a;
+    a.onended = () => setPlaying(false);
+    a.onerror = () => setPlaying(false);
+    a.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
+  };
+  const cls = side === 'front'
+    ? 'text-slate-500 hover:text-white hover:bg-white/10'
+    : 'text-blue-400/60 hover:text-blue-300 hover:bg-blue-500/10';
+  return (
+    <button onClick={toggle}
+      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all flex-shrink-0 ${cls} ${playing ? 'animate-pulse' : ''}`}>
+      <Volume2 size={13} /> {playing ? 'Tocando...' : 'Ouvir'}
+    </button>
+  );
+}
 
 const SCALE = [
   { score: 1, label: 'Não sabia',     color: 'text-red-500',     bg: 'bg-red-500/10 hover:bg-red-500/20 border-red-500/20',         days: 1  },
@@ -92,10 +123,26 @@ function ResultScreen({ total, scores, onRestart, onBack }) {
 }
 
 // ─── Tela de configuração da sessão ───────────────────────────────────────────
-function SetupScreen({ deckName, cardCount, onStart, onBack, isDark }) {
+function SetupScreen({ deckName, allCards, onStart, onBack, isDark }) {
+  const cardCount = allCards.length;
   const [shuffled, setShuffled]   = useState(true);
   const [timerSec, setTimerSec]   = useState(0);
   const [focusMode, setFocusMode] = useState(false);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected]   = useState(new Set(allCards.map((c) => c._id)));
+
+  const toggleCard = (id) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+  const toggleAll = () => {
+    setSelected(selected.size === allCards.length ? new Set() : new Set(allCards.map((c) => c._id)));
+  };
+
+  const chosenCards = allCards.filter((c) => selected.has(c._id));
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6" style={{ backgroundColor: 'var(--bg)' }}>
@@ -108,61 +155,121 @@ function SetupScreen({ deckName, cardCount, onStart, onBack, isDark }) {
           </button>
           <div className="text-4xl mb-3">🧠</div>
           <h1 className="text-2xl font-bold text-white tracking-tight">{deckName}</h1>
-          <p className="text-slate-500 text-sm mt-1">{cardCount} cards</p>
+          <p className="text-slate-500 text-sm mt-1">
+            {selected.size === cardCount ? `${cardCount} cards` : `${selected.size} de ${cardCount} selecionados`}
+          </p>
         </div>
 
-        <div className={`rounded-2xl border p-5 space-y-4 mb-6 ${isDark ? 'glass border-white/8' : 'bg-white/80 border-black/8 shadow-sm'}`}>
-          {/* Ordem */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <Shuffle size={15} className={shuffled ? 'text-blue-400' : 'text-slate-500'} />
-              <span className={`text-sm font-medium ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Embaralhar cards</span>
+        {/* Modo seleção de cards */}
+        {selectMode ? (
+          <div className={`rounded-2xl border mb-4 overflow-hidden ${isDark ? 'glass border-white/8' : 'bg-white/80 border-black/8 shadow-sm'}`}>
+            {/* Header da lista */}
+            <div className={`flex items-center justify-between px-4 py-3 border-b ${isDark ? 'border-white/8' : 'border-black/6'}`}>
+              <span className={`text-xs font-semibold uppercase tracking-widest ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                Selecionar cards
+              </span>
+              <button onClick={toggleAll} className="text-xs text-blue-400 hover:text-blue-300 font-medium transition-colors">
+                {selected.size === allCards.length ? 'Desmarcar todos' : 'Selecionar todos'}
+              </button>
             </div>
-            <button type="button" onClick={() => setShuffled((v) => !v)}
-              className={`relative w-10 h-5 rounded-full transition-all ${shuffled ? 'bg-blue-600' : isDark ? 'bg-white/10' : 'bg-black/15'}`}>
-              <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${shuffled ? 'left-5' : 'left-0.5'}`} />
-            </button>
+            {/* Lista de cards */}
+            <div className="max-h-64 overflow-y-auto">
+              {allCards.map((c) => {
+                const isSelected = selected.has(c._id);
+                return (
+                  <button key={c._id} onClick={() => toggleCard(c._id)}
+                    className={`w-full flex items-start gap-3 px-4 py-3 text-left transition-all border-b last:border-0 ${
+                      isDark ? 'border-white/5 hover:bg-white/5' : 'border-black/4 hover:bg-black/3'
+                    } ${isSelected ? '' : 'opacity-40'}`}>
+                    <div className={`mt-0.5 flex-shrink-0 transition-colors ${isSelected ? 'text-blue-400' : 'text-slate-600'}`}>
+                      {isSelected ? <CheckSquare size={15} /> : <Square size={15} />}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className={`text-sm font-medium truncate ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{c.front}</p>
+                      <p className="text-xs text-slate-500 truncate mt-0.5">{c.back}</p>
+                      {/* Badges de mídia */}
+                      <div className="flex items-center gap-1.5 mt-1">
+                        {(c.frontImage || c.backImage) && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-400 font-medium">🖼 imagem</span>
+                        )}
+                        {(c.frontAudio || c.backAudio) && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-400 font-medium">🔊 áudio</span>
+                        )}
+                        {c.notes && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 font-medium">📝 nota</span>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           </div>
-
-          {/* Modo foco */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <Maximize2 size={15} className={focusMode ? 'text-purple-400' : 'text-slate-500'} />
-              <div>
-                <span className={`text-sm font-medium ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Modo foco</span>
-                <p className="text-slate-500 text-xs">Esconde a Navbar durante o estudo</p>
+        ) : (
+          <div className={`rounded-2xl border p-5 space-y-4 mb-4 ${isDark ? 'glass border-white/8' : 'bg-white/80 border-black/8 shadow-sm'}`}>
+            {/* Ordem */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <Shuffle size={15} className={shuffled ? 'text-blue-400' : 'text-slate-500'} />
+                <span className={`text-sm font-medium ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Embaralhar cards</span>
+              </div>
+              <button type="button" onClick={() => setShuffled((v) => !v)}
+                className={`relative w-10 h-5 rounded-full transition-all ${shuffled ? 'bg-blue-600' : isDark ? 'bg-white/10' : 'bg-black/15'}`}>
+                <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${shuffled ? 'left-5' : 'left-0.5'}`} />
+              </button>
+            </div>
+            {/* Modo foco */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <Maximize2 size={15} className={focusMode ? 'text-purple-400' : 'text-slate-500'} />
+                <div>
+                  <span className={`text-sm font-medium ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Modo foco</span>
+                  <p className="text-slate-500 text-xs">Esconde a Navbar durante o estudo</p>
+                </div>
+              </div>
+              <button type="button" onClick={() => setFocusMode((v) => !v)}
+                className={`relative w-10 h-5 rounded-full transition-all ${focusMode ? 'bg-purple-600' : isDark ? 'bg-white/10' : 'bg-black/15'}`}>
+                <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${focusMode ? 'left-5' : 'left-0.5'}`} />
+              </button>
+            </div>
+            {/* Timer */}
+            <div>
+              <div className="flex items-center gap-2.5 mb-2.5">
+                <Timer size={15} className={timerSec > 0 ? 'text-amber-400' : 'text-slate-500'} />
+                <span className={`text-sm font-medium ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Timer por card</span>
+              </div>
+              <div className="flex gap-2">
+                {TIMER_OPTIONS.map((t) => (
+                  <button key={t} type="button" onClick={() => setTimerSec(t)}
+                    className={`flex-1 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                      timerSec === t
+                        ? 'bg-amber-500/20 border-amber-500/40 text-amber-400'
+                        : isDark ? 'border-white/8 text-slate-500 hover:border-white/15' : 'border-black/8 text-slate-500 hover:border-black/15'
+                    }`}>
+                    {t === 0 ? 'Off' : `${t}s`}
+                  </button>
+                ))}
               </div>
             </div>
-            <button type="button" onClick={() => setFocusMode((v) => !v)}
-              className={`relative w-10 h-5 rounded-full transition-all ${focusMode ? 'bg-purple-600' : isDark ? 'bg-white/10' : 'bg-black/15'}`}>
-              <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${focusMode ? 'left-5' : 'left-0.5'}`} />
-            </button>
           </div>
+        )}
 
-          {/* Timer */}
-          <div>
-            <div className="flex items-center gap-2.5 mb-2.5">
-              <Timer size={15} className={timerSec > 0 ? 'text-amber-400' : 'text-slate-500'} />
-              <span className={`text-sm font-medium ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Timer por card</span>
-            </div>
-            <div className="flex gap-2">
-              {TIMER_OPTIONS.map((t) => (
-                <button key={t} type="button" onClick={() => setTimerSec(t)}
-                  className={`flex-1 py-1.5 rounded-lg text-xs font-medium border transition-all ${
-                    timerSec === t
-                      ? 'bg-amber-500/20 border-amber-500/40 text-amber-400'
-                      : isDark ? 'border-white/8 text-slate-500 hover:border-white/15' : 'border-black/8 text-slate-500 hover:border-black/15'
-                  }`}>
-                  {t === 0 ? 'Off' : `${t}s`}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
+        {/* Botão escolher cards */}
+        <button onClick={() => setSelectMode((v) => !v)}
+          className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium border transition-all mb-3 ${
+            selectMode
+              ? isDark ? 'bg-blue-500/15 border-blue-500/30 text-blue-400' : 'bg-blue-500/10 border-blue-500/20 text-blue-600'
+              : isDark ? 'border-white/8 text-slate-400 hover:border-white/15 hover:text-white' : 'border-black/8 text-slate-500 hover:border-black/15'
+          }`}>
+          <ListChecks size={15} />
+          {selectMode ? `Configurar sessão` : `Escolher cards (${selected.size}/${cardCount})`}
+        </button>
 
-        <button onClick={() => onStart({ shuffled, timerSec, focusMode })}
-          className="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-4 rounded-xl transition-all text-base flex items-center justify-center gap-2 shadow-[0_0_24px_rgba(37,99,235,0.3)]">
-          Começar estudo →
+        <button
+          disabled={selected.size === 0}
+          onClick={() => onStart({ shuffled, timerSec, focusMode, selectedCards: chosenCards })}
+          className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold py-4 rounded-xl transition-all text-base flex items-center justify-center gap-2 shadow-[0_0_24px_rgba(37,99,235,0.3)]">
+          {selected.size === 0 ? 'Selecione ao menos 1 card' : `Começar estudo → ${selected.size < cardCount ? `(${selected.size} cards)` : ''}`}
         </button>
       </div>
     </div>
@@ -341,8 +448,9 @@ export default function StudyPage() {
     setIndex(0); setFlipped(false); setScores([]); setAnswered(false); setDone(false);
   };
 
-  const handleStart = ({ shuffled, timerSec: t, focusMode: fm }) => {
-    setCards(shuffled ? shuffle(allCards) : [...allCards]);
+  const handleStart = ({ shuffled, timerSec: t, focusMode: fm, selectedCards }) => {
+    const base = selectedCards || allCards;
+    setCards(shuffled ? shuffle(base) : [...base]);
     setTimerSec(t);
     setFocusMode(fm);
     setSetup(false);
@@ -359,7 +467,7 @@ export default function StudyPage() {
   if (setup && !loading) return (
     <SetupScreen
       deckName={deck?.name || 'Sessão de estudo'}
-      cardCount={allCards.length}
+      allCards={allCards}
       onStart={handleStart}
       onBack={() => navigate(deckId ? `/deck/${deckId}` : '/dashboard')}
       isDark={isDark}
@@ -550,9 +658,14 @@ export default function StudyPage() {
                   {card.frontImage && <ZoomableImage src={card.frontImage} alt="frente" className="max-h-48 max-w-full object-contain rounded-xl" />}
                   {card.front && <p className="card-back-text text-xl font-medium leading-relaxed text-center" style={{ color: 'var(--text)' }}>{card.front}</p>}
                 </div>
-                <div className="flex items-center justify-center gap-2 text-slate-600 text-xs">
-                  {timerSec > 0 && !flipped && <span className="tabular-nums font-mono text-amber-400">{timeLeft}s</span>}
-                  <RotateCcw size={12} /> Clique para ver a resposta
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-slate-600 text-xs">
+                    {timerSec > 0 && !flipped && <span className="tabular-nums font-mono text-amber-400">{timeLeft}s</span>}
+                    <RotateCcw size={12} /> Clique para ver a resposta
+                  </div>
+                  {card.frontAudio && (
+                    <AudioPlayBtn src={card.frontAudio} side="front" onClick={(e) => e.stopPropagation()} />
+                  )}
                 </div>
               </div>
 
@@ -570,7 +683,12 @@ export default function StudyPage() {
                     </div>
                   )}
                 </div>
-                <p className="text-blue-500/30 text-xs text-center">Como você se saiu?</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-blue-500/30 text-xs">Como você se saiu?</p>
+                  {card.backAudio && (
+                    <AudioPlayBtn src={card.backAudio} side="back" onClick={(e) => e.stopPropagation()} />
+                  )}
+                </div>
               </div>
             </div>
           </div>

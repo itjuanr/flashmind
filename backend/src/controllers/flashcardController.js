@@ -12,8 +12,11 @@ exports.createFlashcard = async (req, res) => {
       backAudio:  backAudio  ? `presente (${(backAudio.length/1024).toFixed(1)}KB)`  : null,
     });
 
-    if (!front?.trim() || !back?.trim()) {
-      return res.status(400).json({ message: 'Pergunta e resposta são obrigatórias.' });
+    // Frente e verso precisam de texto OU imagem OU áudio
+    const frontOk = front?.trim() || frontImage || frontAudio;
+    const backOk  = back?.trim()  || backImage  || backAudio;
+    if (!frontOk || !backOk) {
+      return res.status(400).json({ message: 'Cada lado precisa ter texto, imagem ou áudio.' });
     }
 
     const Deck = require('../models/Deck');

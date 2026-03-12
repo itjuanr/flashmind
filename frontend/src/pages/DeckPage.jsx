@@ -8,7 +8,7 @@ import { useTheme } from '../context/ThemeContext';
 import {
   Plus, ArrowLeft, Loader2, X, BookOpen, Image, Link, Upload,
   Trash2 as TrashIcon, Download, FileUp, Search, History,
-  CheckCircle2, XCircle, Clock, LayoutGrid,
+  CheckCircle2, XCircle, Clock, LayoutGrid, MoreVertical, Copy,
 } from 'lucide-react';
 import CsvImportModal from '../components/CsvImportModal';
 import AudioPicker from '../components/AudioPicker';
@@ -105,16 +105,24 @@ function CardModal({ onClose, onSaved, deckId, editing, toast, isDark }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.front.trim() || !form.back.trim()) { setError('Preencha a pergunta e a resposta.'); return; }
-    setLoading(true);
 
-    // DEBUG — remover após confirmar que funciona
-    console.log('[CardModal] form a enviar:', {
-      front: form.front,
-      back: form.back,
-      frontAudio: form.frontAudio ? `${form.frontAudio.substring(0, 50)}... (${(form.frontAudio.length/1024).toFixed(1)}KB)` : null,
-      backAudio:  form.backAudio  ? `${form.backAudio.substring(0, 50)}... (${(form.backAudio.length/1024).toFixed(1)}KB)`  : null,
-    });
+    // Frente: precisa de texto OU imagem OU áudio
+    const frontOk = form.front.trim() || form.frontImage || form.frontAudio;
+    // Verso: precisa de texto OU imagem OU áudio
+    const backOk  = form.back.trim()  || form.backImage  || form.backAudio;
+
+    if (!frontOk || !backOk) {
+      setError(
+        !frontOk && !backOk
+          ? 'Adicione conteúdo na pergunta e na resposta (texto, imagem ou áudio).'
+          : !frontOk
+          ? 'A pergunta precisa de texto, imagem ou áudio.'
+          : 'A resposta precisa de texto, imagem ou áudio.'
+      );
+      return;
+    }
+
+    setLoading(true);
 
     try {
       let res;
@@ -125,16 +133,11 @@ function CardModal({ onClose, onSaved, deckId, editing, toast, isDark }) {
         res = await api.post('/flashcards', { ...form, deckId });
         toast('Flashcard criado!', 'success');
       }
-      console.log('[CardModal] resposta do backend:', {
-        frontAudio: res.data.frontAudio ? `presente (${(res.data.frontAudio.length/1024).toFixed(1)}KB)` : null,
-        backAudio:  res.data.backAudio  ? `presente (${(res.data.backAudio.length/1024).toFixed(1)}KB)`  : null,
-      });
       onSaved(res.data, !!editing);
       onClose();
     } catch (err) {
       const msg = err.response?.data?.message || err.message || 'Erro ao salvar card.';
       setError(msg);
-      console.error('[CardModal] ERRO:', err.response?.status, err.response?.data, err.message);
     } finally {
       setLoading(false);
     }
@@ -163,7 +166,7 @@ function CardModal({ onClose, onSaved, deckId, editing, toast, isDark }) {
                 <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest">Pergunta</label>
                 <span className="text-[10px] text-slate-600">{wordCount(form.front)} palavras · {charCount(form.front)} chars</span>
               </div>
-              <textarea required rows={2} placeholder="O que você quer memorizar?"
+              <textarea rows={2} placeholder="O que você quer memorizar?"
                 className="w-full bg-white/4 border border-white/8 focus:border-blue-500/50 px-4 py-3 rounded-xl outline-none transition-all text-white placeholder-slate-600 text-sm resize-none"
                 value={form.front} onChange={(e) => setForm({ ...form, front: e.target.value })} />
             </div>
@@ -179,7 +182,7 @@ function CardModal({ onClose, onSaved, deckId, editing, toast, isDark }) {
                 <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest">Resposta</label>
                 <span className="text-[10px] text-slate-600">{wordCount(form.back)} palavras · {charCount(form.back)} chars</span>
               </div>
-              <textarea required rows={2} placeholder="A resposta que deve aparecer ao virar."
+              <textarea rows={2} placeholder="A resposta que deve aparecer ao virar."
                 className="w-full bg-white/4 border border-white/8 focus:border-blue-500/50 px-4 py-3 rounded-xl outline-none transition-all text-white placeholder-slate-600 text-sm resize-none"
                 value={form.back} onChange={(e) => setForm({ ...form, back: e.target.value })} />
             </div>
@@ -287,6 +290,9 @@ export default function DeckPage() {
   const [showImport, setShowImport] = useState(false);
   const [activeTab, setActiveTab]   = useState('cards'); // 'cards' | 'history'
   const [search, setSearch]         = useState('');
+  const [showDeckMenu, setShowDeckMenu] = useState(false);
+  const [confirmDeleteDeck, setConfirmDeleteDeck] = useState(false);
+  const deckMenuRef = useRef();
 
   useEffect(() => {
     const load = async () => {
@@ -323,6 +329,38 @@ export default function DeckPage() {
     } catch { toast('Erro ao favoritar.', 'error'); }
   };
 
+  const handleDuplicateCard = async (card) => {
+    try {
+      const res = await api.post('/flashcards', {
+        deckId,
+        front: card.front + ' (cópia)',
+        back: card.back,
+        frontImage: card.frontImage || null,
+        backImage:  card.backImage  || null,
+        frontAudio: card.frontAudio || null,
+        backAudio:  card.backAudio  || null,
+        notes: card.notes || '',
+      });
+      setCards((prev) => [res.data, ...prev]);
+      toast('Card duplicado!', 'success');
+    } catch { toast('Erro ao duplicar card.', 'error'); }
+  };
+
+  const handleDeleteDeck = async () => {
+    try {
+      await api.delete(`/decks/${deckId}`);
+      toast('Deck excluído.', 'info');
+      navigate('/dashboard');
+    } catch { toast('Erro ao excluir deck.', 'error'); }
+  };
+
+  // Fecha menu ao clicar fora
+  useEffect(() => {
+    const handler = (e) => { if (deckMenuRef.current && !deckMenuRef.current.contains(e.target)) setShowDeckMenu(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
   const exportCsv = () => {
     if (cards.length === 0) { toast('Nenhum card para exportar.', 'error'); return; }
     const rows = cards.map((c) => `"${(c.front||'').replace(/"/g,'""')}","${(c.back||'').replace(/"/g,'""')}"`);
@@ -357,14 +395,31 @@ export default function DeckPage() {
       {showModal && <CardModal onClose={closeModal} onSaved={handleSaved} deckId={deckId} editing={editing} toast={toast} isDark={isDark} />}
       {showImport && <CsvImportModal deckId={deckId} deckName={deck?.name||''} onClose={() => setShowImport(false)} onImported={handleImported} />}
 
-      {/* Confirm delete */}
+      {confirmDeleteDeck && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="w-full max-w-sm glass rounded-3xl border border-white/10 p-8 text-center">
+            <div className="text-4xl mb-4">⚠️</div>
+            <h3 className="text-white font-bold text-lg mb-2">Excluir deck?</h3>
+            <p className="text-slate-500 text-sm mb-8">
+              O deck <span className="text-white font-medium">"{deck?.name}"</span> e todos os seus {cards.length} card{cards.length !== 1 ? 's' : ''} serão removidos permanentemente.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirmDeleteDeck(false)}
+                className="flex-1 bg-white/5 hover:bg-white/10 border border-white/8 text-slate-300 font-semibold py-3 rounded-xl transition-all text-sm">Cancelar</button>
+              <button onClick={handleDeleteDeck}
+                className="flex-1 bg-red-500/15 hover:bg-red-500/25 border border-red-500/25 text-red-400 font-semibold py-3 rounded-xl transition-all text-sm">Excluir tudo</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {confirmDeleteCard && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="w-full max-w-sm glass rounded-3xl border border-white/10 p-8 text-center">
             <div className="text-4xl mb-4">🗑️</div>
             <h3 className="text-white font-bold text-lg mb-2">Excluir flashcard?</h3>
             <p className="text-slate-500 text-sm mb-8">
-              O card <span className="text-white font-medium">"{confirmDeleteCard.front.slice(0,40)}{confirmDeleteCard.front.length>40?'...':''}"</span> será removido permanentemente.
+              O card <span className="text-white font-medium">"{confirmDeleteCard.front.length > 40 ? confirmDeleteCard.front.slice(0,40) + '...' : confirmDeleteCard.front}"</span> será removido permanentemente.
             </p>
             <div className="flex gap-3">
               <button onClick={() => setConfirmDeleteCard(null)}
@@ -400,16 +455,33 @@ export default function DeckPage() {
                 </div>
               </div>
               <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
-                {cards.length > 0 && (
-                  <button onClick={exportCsv}
-                    className={`flex items-center gap-1.5 text-sm font-medium px-4 py-2.5 rounded-xl transition-all border ${isDark ? 'text-slate-400 border-white/8 hover:border-white/15 hover:text-white' : 'text-slate-500 border-black/8 hover:border-black/15'}`}>
-                    <Download size={14} /> Exportar CSV
+                {/* Menu hambúrguer do deck */}
+                <div className="relative" ref={deckMenuRef}>
+                  <button onClick={() => setShowDeckMenu((v) => !v)}
+                    className={`flex items-center gap-1.5 text-sm font-medium px-3 py-2.5 rounded-xl transition-all border ${isDark ? 'text-slate-400 border-white/8 hover:border-white/15 hover:text-white' : 'text-slate-500 border-black/8 hover:border-black/15'}`}>
+                    <MoreVertical size={15} />
                   </button>
-                )}
-                <button onClick={() => setShowImport(true)}
-                  className={`flex items-center gap-1.5 text-sm font-medium px-4 py-2.5 rounded-xl transition-all border ${isDark ? 'text-slate-400 border-white/8 hover:border-blue-500/40 hover:text-blue-400' : 'text-slate-500 border-black/8 hover:border-blue-500/30'}`}>
-                  <FileUp size={14} /> Importar CSV
-                </button>
+                  {showDeckMenu && (
+                    <div className={`absolute right-0 top-full mt-2 w-48 rounded-2xl border shadow-xl z-30 overflow-hidden ${isDark ? 'glass border-white/10 bg-slate-900/95' : 'bg-white border-black/8'}`}>
+                      {cards.length > 0 && (
+                        <button onClick={() => { exportCsv(); setShowDeckMenu(false); }}
+                          className={`w-full flex items-center gap-2.5 px-4 py-3 text-sm transition-all ${isDark ? 'text-slate-300 hover:bg-white/8' : 'text-slate-700 hover:bg-black/4'}`}>
+                          <Download size={14} className="text-slate-500" /> Exportar CSV
+                        </button>
+                      )}
+                      <button onClick={() => { setShowImport(true); setShowDeckMenu(false); }}
+                        className={`w-full flex items-center gap-2.5 px-4 py-3 text-sm transition-all ${isDark ? 'text-slate-300 hover:bg-white/8' : 'text-slate-700 hover:bg-black/4'}`}>
+                        <FileUp size={14} className="text-slate-500" /> Importar CSV
+                      </button>
+                      <div className={`h-px mx-3 ${isDark ? 'bg-white/8' : 'bg-black/6'}`} />
+                      <button onClick={() => { setConfirmDeleteDeck(true); setShowDeckMenu(false); }}
+                        className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-red-400 hover:bg-red-500/10 transition-all">
+                        <TrashIcon size={14} /> Excluir deck
+                      </button>
+                    </div>
+                  )}
+                </div>
+
                 <button onClick={() => { setEditing(null); setShowModal(true); }}
                   className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl font-semibold text-sm transition-all shadow-[0_0_20px_rgba(37,99,235,0.2)] flex items-center gap-2 group">
                   <Plus size={16} className="group-hover:rotate-90 transition-transform duration-200" /> Novo card
@@ -468,6 +540,7 @@ export default function DeckPage() {
                         <FlashCard key={card._id} card={card}
                           onFavorite={handleFavorite}
                           onEdit={(c) => { setEditing(c); setShowModal(true); }}
+                          onDuplicate={handleDuplicateCard}
                           onDelete={(c) => setConfirmDeleteCard(c)} />
                       ))}
                     </div>
