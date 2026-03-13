@@ -13,6 +13,7 @@ import StudyPage from './pages/StudyPage';
 import FavoritesPage from './pages/FavoritesPage';
 import StatsPage from './pages/StatsPage';
 import SharePage from './pages/SharePage';
+import ContactPage from './pages/ContactPage';
 
 export default function App() {
   return (
@@ -25,6 +26,7 @@ export default function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/share/:token" element={<SharePage />} />
+              <Route path="/contact" element={<ContactPage />} />
               <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
               <Route path="/deck/:deckId" element={<PrivateRoute><DeckPage /></PrivateRoute>} />
               <Route path="/study/:deckId" element={<PrivateRoute><StudyPage /></PrivateRoute>} />

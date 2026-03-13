@@ -14,8 +14,21 @@ connectDB();
 
 const app = express();
 
+const ALLOWED_ORIGINS = [
+  process.env.CLIENT_URL,
+  'http://localhost:5173',
+  'http://localhost:3000',
+].filter(Boolean);
+
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  origin: (origin, callback) => {
+    // Permite requests sem origin (Postman, mobile, etc) e origens permitidas
+    if (!origin || ALLOWED_ORIGINS.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error(`CORS bloqueado: ${origin}`));
+    }
+  },
   credentials: true,
 }));
 

@@ -53,6 +53,7 @@ export default function FlashCard({ card, onFavorite, onEdit, onDuplicate, onDel
   const [copied, setCopied] = useState(false);
 
   const lvl = LEVEL_INFO[Math.min(card.level || 0, LEVEL_INFO.length - 1)];
+  const showLevel = (card.level || 0) > 0;
   const accentColor = card.cardColor || null;
   const borderStyle = accentColor
     ? { borderColor: accentColor + '40', boxShadow: `0 0 0 1px ${accentColor}25` }
@@ -82,10 +83,12 @@ export default function FlashCard({ card, onFavorite, onEdit, onDuplicate, onDel
 
       {/* Botões de ação */}
       <div className="absolute top-3 right-3 z-20 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        {/* Indicador de nível */}
-        <span className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-semibold uppercase tracking-wide ${lvl.text} opacity-60`}>
-          <span className={`w-1.5 h-1.5 rounded-full ${lvl.dot}`} /> {lvl.label}
-        </span>
+        {/* Indicador de nível — não exibe quando é Novo */}
+        {showLevel && (
+          <span className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-semibold uppercase tracking-wide ${lvl.text} opacity-60`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${lvl.dot}`} /> {lvl.label}
+          </span>
+        )}
         <button onClick={(e) => { e.stopPropagation(); onFavorite?.(card); }}
           className={`p-2 rounded-lg transition-all hover:bg-white/10 ${card.isFavorite ? 'text-amber-400' : 'text-slate-500 hover:text-amber-400'}`}>
           <Star size={14} fill={card.isFavorite ? 'currentColor' : 'none'} />

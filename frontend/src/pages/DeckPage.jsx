@@ -153,7 +153,7 @@ function CardModal({ onClose, onSaved, deckId, editing, toast, isDark }) {
 
   return (
     <div className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-lg glass rounded-3xl border border-white/10 flex flex-col" style={{ maxHeight: '90vh' }}>
+      <div className="w-full max-w-lg bg-[#0F0F18] rounded-3xl border border-white/10 flex flex-col" style={{ maxHeight: '90vh' }}>
         {/* Header fixo */}
         <div className="flex items-center justify-between px-8 pt-7 pb-4 border-b border-white/8 flex-shrink-0">
           <div>
@@ -458,14 +458,33 @@ export default function DeckPage() {
     { value: 'due',      label: 'Próxima revisão' },
   ];
 
-  const exportCsv = () => {
+  const exportXlsx = async () => {
     if (cards.length === 0) { toast('Nenhum card para exportar.', 'error'); return; }
-    const rows = cards.map((c) => `"${(c.front||'').replace(/"/g,'""')}","${(c.back||'').replace(/"/g,'""')}"`);
-    const bom = '\uFEFF';
-    const csv = bom + ['frente,verso', ...rows].join('\r\n');
-    const url  = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
-    const a = document.createElement('a'); a.href = url; a.download = `${deck?.name||'deck'}.csv`; a.click();
-    URL.revokeObjectURL(url);
+    // Carrega SheetJS se necessário
+    if (!window.XLSX) {
+      await new Promise((res) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+        s.onload = res; document.head.appendChild(s);
+      });
+    }
+    const XLSX = window.XLSX;
+    const data = [
+      ["frente", "verso", "notas", "nivel", "favorito", "cor"],
+      ...cards.map((c) => [
+        c.front || '',
+        c.back  || '',
+        c.notes || '',
+        c.level || 1,
+        c.isFavorite ? 'sim' : 'nao',
+        c.cardColor || '',
+      ]),
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    ws['!cols'] = [{ wch: 36 }, { wch: 36 }, { wch: 22 }, { wch: 8 }, { wch: 10 }, { wch: 12 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Flashcards");
+    XLSX.writeFile(wb, `${deck?.name || 'deck'}.xlsx`);
     toast(`${cards.length} cards exportados!`, 'success');
   };
 
@@ -494,7 +513,7 @@ export default function DeckPage() {
 
       {showShareModal && shareToken && (
         <div className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-sm glass rounded-3xl border border-white/10 p-8 text-center">
+          <div className="w-full max-w-sm bg-[#0F0F18] rounded-3xl border border-white/10 p-8 text-center">
             <div className="text-4xl mb-4">🔗</div>
             <h3 className="text-white font-bold text-lg mb-2">Deck compartilhado!</h3>
             <p className="text-slate-500 text-sm mb-6">Qualquer pessoa com este link pode visualizar e clonar o deck.</p>
@@ -521,7 +540,7 @@ export default function DeckPage() {
 
       {confirmDeleteDeck && (
         <div className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-sm glass rounded-3xl border border-white/10 p-8 text-center">
+          <div className="w-full max-w-sm bg-[#0F0F18] rounded-3xl border border-white/10 p-8 text-center">
             <div className="text-4xl mb-4">⚠️</div>
             <h3 className="text-white font-bold text-lg mb-2">Excluir deck?</h3>
             <p className="text-slate-500 text-sm mb-8">
@@ -539,7 +558,7 @@ export default function DeckPage() {
 
       {confirmDeleteCard && (
         <div className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-sm glass rounded-3xl border border-white/10 p-8 text-center">
+          <div className="w-full max-w-sm bg-[#0F0F18] rounded-3xl border border-white/10 p-8 text-center">
             <div className="text-4xl mb-4">🗑️</div>
             <h3 className="text-white font-bold text-lg mb-2">Excluir flashcard?</h3>
             <p className="text-slate-500 text-sm mb-8">
@@ -586,18 +605,27 @@ export default function DeckPage() {
                     <MoreVertical size={15} />
                   </button>
                   {showDeckMenu && (
-                    <div className={`absolute right-0 top-full mt-2 w-48 rounded-2xl border shadow-xl z-30 overflow-hidden ${isDark ? 'glass border-white/10 bg-slate-900/95' : 'bg-white border-black/8'}`}>
+                    <div className={`absolute right-0 top-full mt-2 w-52 rounded-2xl border shadow-2xl z-30 overflow-hidden ${isDark ? 'bg-[#0F0F18] border-white/10' : 'bg-white border-black/8'}`}>
                       {cards.length > 0 && (
-                        <button onClick={() => { exportCsv(); setShowDeckMenu(false); }}
+                        <button onClick={() => { exportXlsx(); setShowDeckMenu(false); }}
                           className={`w-full flex items-center gap-2.5 px-4 py-3 text-sm transition-all ${isDark ? 'text-slate-300 hover:bg-white/8' : 'text-slate-700 hover:bg-black/4'}`}>
-                          <Download size={14} className="text-slate-500" /> Exportar CSV
+                          <Download size={14} className="text-slate-500" /> Exportar Excel (.xlsx)
                         </button>
                       )}
                       <button onClick={() => { setShowImport(true); setShowDeckMenu(false); }}
                         className={`w-full flex items-center gap-2.5 px-4 py-3 text-sm transition-all ${isDark ? 'text-slate-300 hover:bg-white/8' : 'text-slate-700 hover:bg-black/4'}`}>
                         <FileUp size={14} className="text-slate-500" /> Importar CSV
                       </button>
-                      <button onClick={() => { handleShare(); setShowDeckMenu(false); }} disabled={sharing}
+                      <button
+                        onClick={() => {
+                          setShowDeckMenu(false);
+                          if (shareToken) {
+                            setShowShareModal(true); // já tem token → só exibe modal
+                          } else {
+                            handleShare(); // sem token → gera
+                          }
+                        }}
+                        disabled={sharing}
                         className={`w-full flex items-center gap-2.5 px-4 py-3 text-sm transition-all ${shareToken ? 'text-emerald-400 hover:bg-emerald-500/10' : isDark ? 'text-slate-300 hover:bg-white/8' : 'text-slate-700 hover:bg-black/4'}`}>
                         <Link size={14} className="text-slate-500" /> {shareToken ? 'Link ativo (ver)' : 'Compartilhar deck'}
                       </button>
