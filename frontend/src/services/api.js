@@ -1,7 +1,9 @@
 import axios from 'axios';
 
+const BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
+  baseURL: BASE.endsWith('/api') ? BASE : `${BASE}/api`,
   headers: { 'Content-Type': 'application/json' },
   maxBodyLength: 50 * 1024 * 1024,
   maxContentLength: 50 * 1024 * 1024,
