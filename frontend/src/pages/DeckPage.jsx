@@ -605,7 +605,10 @@ export default function DeckPage() {
                     <MoreVertical size={15} />
                   </button>
                   {showDeckMenu && (
-                    <div className={`absolute right-0 top-full mt-2 w-52 rounded-2xl border shadow-2xl z-30 overflow-hidden ${isDark ? 'bg-[#0F0F18] border-white/10' : 'bg-white border-black/8'}`}>
+                    <>
+                      {/* Overlay para fechar ao clicar fora — mobile */}
+                      <div className="fixed inset-0 z-20" onClick={() => setShowDeckMenu(false)} />
+                      <div className={`absolute left-0 sm:left-auto sm:right-0 top-full mt-2 w-52 rounded-2xl border shadow-2xl z-30 overflow-hidden ${isDark ? 'bg-[#0F0F18] border-white/10' : 'bg-white border-black/8'}`}>
                       {cards.length > 0 && (
                         <button onClick={() => { exportXlsx(); setShowDeckMenu(false); }}
                           className={`w-full flex items-center gap-2.5 px-4 py-3 text-sm transition-all ${isDark ? 'text-slate-300 hover:bg-white/8' : 'text-slate-700 hover:bg-black/4'}`}>
@@ -635,6 +638,7 @@ export default function DeckPage() {
                         <TrashIcon size={14} /> Excluir deck
                       </button>
                     </div>
+                    </>
                   )}
                 </div>
 
