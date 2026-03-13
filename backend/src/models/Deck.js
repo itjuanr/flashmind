@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 
+
 const deckSchema = new mongoose.Schema({
   userId:      { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   name:        { type: String, required: [true, 'Adicione um nome para o deck'] },
@@ -9,6 +10,7 @@ const deckSchema = new mongoose.Schema({
   deckImage:   { type: String, default: null },
   isFavorite:  { type: Boolean, default: false },
   tags:        { type: [String], default: [] },
+  shareToken:  { type: String, default: null, unique: true, sparse: true },
   reviewSettings: {
     notify:       { type: Boolean, default: true },
     newCardDelay: { type: Number,  default: 1, enum: [1, 7, 14] },

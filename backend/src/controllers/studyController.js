@@ -190,3 +190,41 @@ exports.getHistory = async (req, res) => {
     res.status(500).json({ message: 'Erro ao buscar histórico.' });
   }
 };
+
+// PATCH getStats — versão enriquecida com dueTotal para badge da Navbar
+// (sobrescreve o export existente via alias — o original fica como fallback)
+const Flashcard_patch = require('../models/Flashcard');
+const origGetStats = exports.getStats;
+exports.getStats = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay   = new Date(); endOfDay.setHours(23, 59, 59, 999);
+    const now = new Date();
+
+    const [todaySessions, allSessions, dueTotal, cardsStudiedToday] = await Promise.all([
+      require('../models/StudySession').find({ userId, createdAt: { $gte: startOfDay, $lte: endOfDay } }),
+      require('../models/StudySession').find({ userId }),
+      Flashcard_patch.countDocuments({ userId, nextReview: { $lte: now } }),
+      require('../models/StudySession').aggregate([
+        { $match: { userId: require('mongoose').Types.ObjectId.createFromHexString(userId), createdAt: { $gte: startOfDay, $lte: endOfDay } } },
+        { $group: { _id: null, total: { $sum: '$totalCards' } } },
+      ]),
+    ]);
+
+    const decksStudiedToday = new Set(todaySessions.map((s) => s.deckId.toString())).size;
+    const totalCorrect  = allSessions.reduce((a, s) => a + s.correct, 0);
+    const totalAnswered = allSessions.reduce((a, s) => a + s.totalCards, 0);
+    const accuracy = totalAnswered > 0 ? Math.round((totalCorrect / totalAnswered) * 100) : null;
+
+    res.json({
+      decksStudiedToday,
+      accuracy,
+      totalSessions: allSessions.length,
+      dueTotal,
+      cardsStudiedToday: cardsStudiedToday[0]?.total || 0,
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Erro ao buscar stats.' });
+  }
+};

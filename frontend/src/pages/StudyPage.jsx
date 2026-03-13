@@ -55,7 +55,7 @@ const SCALE = [
 const TIMER_OPTIONS = [0, 15, 30, 60]; // 0 = desativado
 
 // ─── Tela de Resultado ─────────────────────────────────────────────────────────
-function ResultScreen({ total, scores, onRestart, onBack }) {
+function ResultScreen({ total, scores, wrongCards = [], onRestart, onRetryWrong, onBack }) {
   const dominated = scores.filter((s) => s === 5).length;
   const correct   = scores.filter((s) => s === 4).length;
   const medium    = scores.filter((s) => s === 3).length;
@@ -108,6 +108,12 @@ function ResultScreen({ total, scores, onRestart, onBack }) {
           </div>
         </div>
         <div className="flex gap-3">
+          {wrongCards.length > 0 && (
+            <button onClick={onRetryWrong}
+              className="flex-1 flex items-center justify-center gap-2 bg-red-500/15 hover:bg-red-500/25 border border-red-500/20 text-red-400 font-semibold py-3.5 rounded-xl transition-all text-sm">
+              <RotateCcw size={16} /> Revisar {wrongCards.length} erro{wrongCards.length > 1 ? 's' : ''}
+            </button>
+          )}
           <button onClick={onRestart}
             className="flex-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3.5 rounded-xl transition-all text-sm">
             <RefreshCw size={16} /> Repetir
@@ -313,7 +319,8 @@ export default function StudyPage() {
   const [confirmExit, setConfirmExit] = useState(false);
   const [editingCard, setEditingCard] = useState(null); // card sendo editado inline
 
-  const shuffle = (arr) => [...arr].sort(() => Math.random() - 0.5);
+  const [countdown, setCountdown] = useState(0); // 3-2-1-0=go
+  const [wrongCards, setWrongCards] = useState([]); // cards errados para revisão rápida
 
   useEffect(() => {
     if (customCards) {
@@ -335,6 +342,16 @@ export default function StudyPage() {
     };
     load();
   }, [deckId]);
+
+  // Countdown 3-2-1-Go
+  useEffect(() => {
+    if (countdown <= 0) return;
+    const id = setTimeout(() => {
+      if (countdown === 1) setCountdown(0); // Go!
+      else setCountdown((v) => v - 1);
+    }, 800);
+    return () => clearTimeout(id);
+  }, [countdown]);
 
   // Timer
   useEffect(() => {
@@ -398,6 +415,7 @@ export default function StudyPage() {
     setAnswered(true);
     const nextScores = [...scores, score];
     setScores(nextScores);
+    if (score <= 2) setWrongCards((prev) => [...prev, cards[index]]); // guarda errados
     const days = SCALE.find((s) => s.score === score)?.days || 1;
     try { await api.put(`/flashcards/${cards[index]._id}/review`, { days }); } catch {}
     setAnimating(true);
@@ -443,6 +461,8 @@ export default function StudyPage() {
     return () => window.removeEventListener('keydown', handler);
   }, [setup, flipped, answered, done, loading, handleScore, editingCard, index, cards]);
 
+  const shuffle = (arr) => [...arr].sort(() => Math.random() - 0.5);
+
   const restart = (newShuffled = true) => {
     setCards(newShuffled ? shuffle(allCards) : [...allCards]);
     setIndex(0); setFlipped(false); setScores([]); setAnswered(false); setDone(false);
@@ -454,6 +474,7 @@ export default function StudyPage() {
     setTimerSec(t);
     setFocusMode(fm);
     setSetup(false);
+    setCountdown(3);
   };
 
   // ── Loading ──
@@ -476,9 +497,23 @@ export default function StudyPage() {
 
   // ── Resultado ──
   if (done) return (
-    <ResultScreen total={cards.length} scores={scores}
-      onRestart={() => { setSetup(true); setDone(false); }}
+    <ResultScreen total={cards.length} scores={scores} wrongCards={wrongCards}
+      onRestart={() => { setSetup(true); setDone(false); setWrongCards([]); }}
+      onRetryWrong={() => {
+        if (wrongCards.length === 0) return;
+        setCards(wrongCards); setWrongCards([]);
+        setIndex(0); setFlipped(false); setScores([]); setAnswered(false); setDone(false);
+      }}
       onBack={() => navigate('/dashboard')} />
+  );
+
+  // ── Countdown ──
+  if (countdown > 0) return (
+    <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--bg)' }}>
+      <div key={countdown} className="text-9xl font-black text-white animate-ping-once select-none" style={{ animationDuration: '0.6s' }}>
+        {countdown}
+      </div>
+    </div>
   );
 
   // ── Sem cards ──

@@ -301,11 +301,23 @@ export default function DeckPage() {
   const [editing, setEditing]       = useState(null);
   const [confirmDeleteCard, setConfirmDeleteCard] = useState(null);
   const [showImport, setShowImport] = useState(false);
-  const [activeTab, setActiveTab]   = useState('cards'); // 'cards' | 'history'
+  const [activeTab, setActiveTab]   = useState('cards');
   const [search, setSearch]         = useState('');
+  const [shareToken, setShareToken] = useState(null);
+  const [sharing, setSharing]       = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
   const [showDeckMenu, setShowDeckMenu] = useState(false);
   const [confirmDeleteDeck, setConfirmDeleteDeck] = useState(false);
   const deckMenuRef = useRef();
+
+  // Ordenação de cards
+  const [cardSort, setCardSort] = useState('position'); // 'position'|'az'|'za'|'level'|'due'
+  const [showCardSort, setShowCardSort] = useState(false);
+  const cardSortRef = useRef();
+
+  // Drag & drop para reordenar
+  const [dragId, setDragId]       = useState(null);
+  const [dragOverId, setDragOverId] = useState(null);
 
   useEffect(() => {
     const load = async () => {
@@ -313,6 +325,7 @@ export default function DeckPage() {
         const [deckRes, cardsRes] = await Promise.all([api.get(`/decks/${deckId}`), api.get(`/flashcards/deck/${deckId}`)]);
         setDeck(deckRes.data);
         setCards(cardsRes.data);
+        setShareToken(deckRes.data.shareToken || null);
       } catch { toast('Erro ao carregar o deck.', 'error'); }
       finally { setLoading(false); }
     };
@@ -359,6 +372,17 @@ export default function DeckPage() {
     } catch { toast('Erro ao duplicar card.', 'error'); }
   };
 
+  const handleShare = async () => {
+    setSharing(true);
+    try {
+      const res = await api.patch(`/decks/${deckId}/share`);
+      setShareToken(res.data.shareToken);
+      if (res.data.shareToken) setShowShareModal(true);
+      else toast('Link revogado.', 'info');
+    } catch { toast('Erro ao compartilhar.', 'error'); }
+    finally { setSharing(false); }
+  };
+
   const handleDeleteDeck = async () => {
     try {
       await api.delete(`/decks/${deckId}`);
@@ -367,12 +391,72 @@ export default function DeckPage() {
     } catch { toast('Erro ao excluir deck.', 'error'); }
   };
 
-  // Fecha menu ao clicar fora
+  // Fecha menus ao clicar fora
   useEffect(() => {
-    const handler = (e) => { if (deckMenuRef.current && !deckMenuRef.current.contains(e.target)) setShowDeckMenu(false); };
+    const handler = (e) => {
+      if (deckMenuRef.current && !deckMenuRef.current.contains(e.target)) setShowDeckMenu(false);
+      if (cardSortRef.current && !cardSortRef.current.contains(e.target)) setShowCardSort(false);
+    };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
+
+  // Atalho N → novo card
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.key === 'n' || e.key === 'N') {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+        setEditing(null); setShowModal(true);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
+
+  const handleColorChange = async (card, color) => {
+    try {
+      const res = await api.put(`/flashcards/${card._id}`, { cardColor: color });
+      setCards((prev) => prev.map((c) => c._id === card._id ? res.data : c));
+    } catch { toast('Erro ao alterar cor.', 'error'); }
+  };
+
+  // Drag & drop reorder
+  const handleDragStart = (e, id) => { setDragId(id); e.dataTransfer.effectAllowed = 'move'; };
+  const handleDragOver  = (e, id) => { e.preventDefault(); setDragOverId(id); };
+  const handleDrop      = async (e, targetId) => {
+    e.preventDefault();
+    if (!dragId || dragId === targetId) { setDragId(null); setDragOverId(null); return; }
+    const reordered = [...cards];
+    const fromIdx = reordered.findIndex((c) => c._id === dragId);
+    const toIdx   = reordered.findIndex((c) => c._id === targetId);
+    const [moved] = reordered.splice(fromIdx, 1);
+    reordered.splice(toIdx, 0, moved);
+    const withPos = reordered.map((c, i) => ({ ...c, position: i }));
+    setCards(withPos);
+    setDragId(null); setDragOverId(null);
+    try {
+      await api.patch('/flashcards/reorder', { order: withPos.map(({ _id, position }) => ({ _id, position })) });
+    } catch { toast('Erro ao reordenar.', 'error'); }
+  };
+
+  // Ordenação visual dos cards
+  const sortedCards = [...cards].sort((a, b) => {
+    switch (cardSort) {
+      case 'az':    return (a.front||'').localeCompare(b.front||'');
+      case 'za':    return (b.front||'').localeCompare(a.front||'');
+      case 'level': return (b.level||0) - (a.level||0);
+      case 'due':   return new Date(a.nextReview) - new Date(b.nextReview);
+      default:      return (a.position||0) - (b.position||0);
+    }
+  });
+
+  const CARD_SORT_OPTIONS = [
+    { value: 'position', label: 'Ordem manual' },
+    { value: 'az',       label: 'A → Z' },
+    { value: 'za',       label: 'Z → A' },
+    { value: 'level',    label: 'Nível (maior)' },
+    { value: 'due',      label: 'Próxima revisão' },
+  ];
 
   const exportCsv = () => {
     if (cards.length === 0) { toast('Nenhum card para exportar.', 'error'); return; }
@@ -391,14 +475,14 @@ export default function DeckPage() {
 
   const closeModal = () => { setShowModal(false); setEditing(null); };
 
-  // Filtro de busca
+  // Filtro de busca (sobre cards já ordenados)
   const filtered = search.trim()
-    ? cards.filter((c) =>
-        c.front.toLowerCase().includes(search.toLowerCase()) ||
-        c.back.toLowerCase().includes(search.toLowerCase()) ||
+    ? sortedCards.filter((c) =>
+        (c.front||'').toLowerCase().includes(search.toLowerCase()) ||
+        (c.back||'').toLowerCase().includes(search.toLowerCase()) ||
         (c.notes || '').toLowerCase().includes(search.toLowerCase())
       )
-    : cards;
+    : sortedCards;
 
   return (
     <div className="min-h-screen text-slate-200" style={{ backgroundColor: 'var(--bg)' }}>
@@ -407,6 +491,33 @@ export default function DeckPage() {
 
       {showModal && <CardModal onClose={closeModal} onSaved={handleSaved} deckId={deckId} editing={editing} toast={toast} isDark={isDark} />}
       {showImport && <CsvImportModal deckId={deckId} deckName={deck?.name||''} onClose={() => setShowImport(false)} onImported={handleImported} />}
+
+      {showShareModal && shareToken && (
+        <div className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
+          <div className="w-full max-w-sm glass rounded-3xl border border-white/10 p-8 text-center">
+            <div className="text-4xl mb-4">🔗</div>
+            <h3 className="text-white font-bold text-lg mb-2">Deck compartilhado!</h3>
+            <p className="text-slate-500 text-sm mb-6">Qualquer pessoa com este link pode visualizar e clonar o deck.</p>
+            <div className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border mb-6 ${isDark ? 'bg-white/4 border-white/8' : 'bg-black/3 border-black/8'}`}>
+              <span className="text-xs text-slate-400 truncate flex-1 text-left">{window.location.origin}/share/{shareToken}</span>
+              <button onClick={() => {
+                navigator.clipboard.writeText(`${window.location.origin}/share/${shareToken}`);
+                toast('Link copiado!', 'success');
+              }} className="text-blue-400 hover:text-blue-300 flex-shrink-0"><Copy size={14} /></button>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => { handleShare(); setShowShareModal(false); }}
+                className="flex-1 bg-red-500/15 hover:bg-red-500/25 border border-red-500/20 text-red-400 font-semibold py-3 rounded-xl transition-all text-sm">
+                Revogar link
+              </button>
+              <button onClick={() => setShowShareModal(false)}
+                className="flex-1 bg-white/5 hover:bg-white/10 border border-white/8 text-slate-300 font-semibold py-3 rounded-xl transition-all text-sm">
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {confirmDeleteDeck && (
         <div className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
@@ -486,6 +597,10 @@ export default function DeckPage() {
                         className={`w-full flex items-center gap-2.5 px-4 py-3 text-sm transition-all ${isDark ? 'text-slate-300 hover:bg-white/8' : 'text-slate-700 hover:bg-black/4'}`}>
                         <FileUp size={14} className="text-slate-500" /> Importar CSV
                       </button>
+                      <button onClick={() => { handleShare(); setShowDeckMenu(false); }} disabled={sharing}
+                        className={`w-full flex items-center gap-2.5 px-4 py-3 text-sm transition-all ${shareToken ? 'text-emerald-400 hover:bg-emerald-500/10' : isDark ? 'text-slate-300 hover:bg-white/8' : 'text-slate-700 hover:bg-black/4'}`}>
+                        <Link size={14} className="text-slate-500" /> {shareToken ? 'Link ativo (ver)' : 'Compartilhar deck'}
+                      </button>
                       <div className={`h-px mx-3 ${isDark ? 'bg-white/8' : 'bg-black/6'}`} />
                       <button onClick={() => { setConfirmDeleteDeck(true); setShowDeckMenu(false); }}
                         className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-red-400 hover:bg-red-500/10 transition-all">
@@ -522,23 +637,50 @@ export default function DeckPage() {
             {/* Aba Cards */}
             {activeTab === 'cards' && (
               <>
-                {/* Busca */}
+                {/* Busca + Ordenação */}
                 {cards.length > 0 && (
-                  <div className="relative mb-6 max-w-sm">
-                    <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
-                    <input
-                      type="text" placeholder="Buscar cards..." value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      className={`w-full pl-9 pr-4 py-2.5 rounded-xl text-sm outline-none transition-all border ${
-                        isDark
-                          ? 'bg-white/4 border-white/8 focus:border-blue-500/40 text-white placeholder-slate-600'
-                          : 'bg-black/3 border-black/8 focus:border-blue-500/40 text-slate-800 placeholder-slate-400'
-                      }`}
-                    />
-                    {search && (
-                      <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white">
-                        <X size={13} />
+                  <div className="flex items-center gap-3 mb-6 flex-wrap">
+                    <div className="relative flex-1 max-w-sm">
+                      <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+                      <input
+                        type="text" placeholder="Buscar cards..." value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className={`w-full pl-9 pr-4 py-2.5 rounded-xl text-sm outline-none transition-all border ${
+                          isDark
+                            ? 'bg-white/4 border-white/8 focus:border-blue-500/40 text-white placeholder-slate-600'
+                            : 'bg-black/3 border-black/8 focus:border-blue-500/40 text-slate-800 placeholder-slate-400'
+                        }`}
+                      />
+                      {search && (
+                        <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white">
+                          <X size={13} />
+                        </button>
+                      )}
+                    </div>
+                    {/* Ordenar cards */}
+                    <div className="relative" ref={cardSortRef}>
+                      <button onClick={() => setShowCardSort((v) => !v)}
+                        className={`flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-medium border transition-all ${isDark ? 'border-white/8 text-slate-400 hover:border-white/15' : 'border-black/8 text-slate-500 hover:border-black/15'}`}>
+                        <ArrowLeft size={12} className="rotate-90" />
+                        {CARD_SORT_OPTIONS.find((o) => o.value === cardSort)?.label}
                       </button>
+                      {showCardSort && (
+                        <div className={`absolute right-0 top-full mt-1 w-44 rounded-2xl border shadow-xl z-30 overflow-hidden ${isDark ? 'bg-[#0F0F18] border-white/10' : 'bg-white border-black/8'}`}>
+                          {CARD_SORT_OPTIONS.map((opt) => (
+                            <button key={opt.value} onClick={() => { setCardSort(opt.value); setShowCardSort(false); }}
+                              className={`w-full flex items-center justify-between px-4 py-2.5 text-xs font-medium transition-colors ${
+                                cardSort === opt.value ? 'text-blue-400 bg-blue-500/10' : isDark ? 'text-slate-400 hover:bg-white/5' : 'text-slate-600 hover:bg-black/4'
+                              }`}>
+                              {opt.label}
+                              {cardSort === opt.value && <CheckCircle2 size={12} />}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    {/* Hint arraste para reordenar */}
+                    {cardSort === 'position' && cards.length > 1 && !search && (
+                      <span className="text-[10px] text-slate-600 hidden sm:block">Arraste para reordenar</span>
                     )}
                   </div>
                 )}
@@ -550,11 +692,21 @@ export default function DeckPage() {
                     )}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                       {filtered.map((card) => (
-                        <FlashCard key={card._id} card={card}
-                          onFavorite={handleFavorite}
-                          onEdit={(c) => { setEditing(c); setShowModal(true); }}
-                          onDuplicate={handleDuplicateCard}
-                          onDelete={(c) => setConfirmDeleteCard(c)} />
+                        <div key={card._id}
+                          draggable={cardSort === 'position' && !search}
+                          onDragStart={(e) => handleDragStart(e, card._id)}
+                          onDragOver={(e) => handleDragOver(e, card._id)}
+                          onDrop={(e) => handleDrop(e, card._id)}
+                          onDragEnd={() => { setDragId(null); setDragOverId(null); }}
+                          className={`transition-all ${dragOverId === card._id && dragId !== card._id ? 'scale-105 ring-2 ring-blue-500/40 rounded-2xl' : ''} ${dragId === card._id ? 'opacity-40' : ''}`}
+                        >
+                          <FlashCard card={card}
+                            onFavorite={handleFavorite}
+                            onEdit={(c) => { setEditing(c); setShowModal(true); }}
+                            onDuplicate={handleDuplicateCard}
+                            onDelete={(c) => setConfirmDeleteCard(c)}
+                            onColorChange={handleColorChange} />
+                        </div>
                       ))}
                     </div>
                   </>

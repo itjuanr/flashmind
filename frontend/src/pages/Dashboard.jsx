@@ -301,7 +301,10 @@ export default function Dashboard() {
   // Estado principal
   const [decks, setDecks]           = useState([]);
   const [loading, setLoading]       = useState(true);
-  const [stats, setStats]           = useState({ decksStudiedToday: 0, accuracy: null });
+  const [stats, setStats]           = useState({ decksStudiedToday: 0, accuracy: null, dueTotal: 0, cardsStudiedToday: 0 });
+  const [dailyGoal, setDailyGoal]   = useState(() => parseInt(localStorage.getItem('fm_daily_goal') || '0', 10));
+  const [editingGoal, setEditingGoal] = useState(false);
+  const [goalInput, setGoalInput]   = useState('');
   const [streak, setStreak]         = useState(0);
 
   // Modais
@@ -538,7 +541,70 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Barra de filtros e ordenação */}
+        {/* Meta diária */}
+        {(dailyGoal > 0 || editingGoal) ? (
+          <div className="glass rounded-2xl border border-white/5 p-5 mb-8">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-white">🎯 Meta diária</span>
+                {dailyGoal > 0 && (
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                    stats.cardsStudiedToday >= dailyGoal
+                      ? 'bg-emerald-500/20 text-emerald-400'
+                      : 'bg-white/5 text-slate-400'
+                  }`}>
+                    {stats.cardsStudiedToday >= dailyGoal ? '✓ Concluída!' : `${stats.cardsStudiedToday}/${dailyGoal} cards`}
+                  </span>
+                )}
+              </div>
+              {editingGoal ? (
+                <div className="flex items-center gap-2">
+                  <input type="number" min="1" max="500" placeholder="Ex: 20"
+                    value={goalInput} onChange={(e) => setGoalInput(e.target.value)}
+                    className="w-20 bg-white/5 border border-white/10 text-white text-sm px-2 py-1 rounded-lg outline-none focus:border-blue-500/50"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        const v = parseInt(goalInput, 10);
+                        if (v > 0) { setDailyGoal(v); localStorage.setItem('fm_daily_goal', v); }
+                        setEditingGoal(false);
+                      }
+                      if (e.key === 'Escape') setEditingGoal(false);
+                    }} />
+                  <button onClick={() => {
+                    const v = parseInt(goalInput, 10);
+                    if (v > 0) { setDailyGoal(v); localStorage.setItem('fm_daily_goal', v); }
+                    setEditingGoal(false);
+                  }} className="text-xs text-blue-400 hover:text-blue-300 font-medium">Salvar</button>
+                  <button onClick={() => { if (!dailyGoal) { setDailyGoal(0); localStorage.removeItem('fm_daily_goal'); } setEditingGoal(false); }}
+                    className="text-xs text-slate-500 hover:text-slate-300">Cancelar</button>
+                </div>
+              ) : (
+                <button onClick={() => { setGoalInput(String(dailyGoal)); setEditingGoal(true); }}
+                  className="text-xs text-slate-500 hover:text-slate-300 transition-colors">Editar meta</button>
+              )}
+            </div>
+            {dailyGoal > 0 && (
+              <>
+                <div className={`w-full h-2 rounded-full ${isDark ? 'bg-white/5' : 'bg-black/8'}`}>
+                  <div className={`h-full rounded-full transition-all duration-700 ${
+                    stats.cardsStudiedToday >= dailyGoal ? 'bg-emerald-500' : 'bg-blue-500'
+                  }`} style={{ width: `${Math.min(100, Math.round((stats.cardsStudiedToday / dailyGoal) * 100))}%` }} />
+                </div>
+                <p className="text-slate-600 text-xs mt-2">
+                  {stats.cardsStudiedToday >= dailyGoal
+                    ? 'Meta atingida! Continue assim 🎉'
+                    : `Faltam ${dailyGoal - stats.cardsStudiedToday} cards para bater a meta`}
+                </p>
+              </>
+            )}
+          </div>
+        ) : (
+          <button onClick={() => { setGoalInput(''); setEditingGoal(true); setDailyGoal(1); }}
+            className={`flex items-center gap-2 text-xs mb-8 transition-colors ${isDark ? 'text-slate-600 hover:text-slate-400' : 'text-slate-400 hover:text-slate-600'}`}>
+            <span className="text-base">🎯</span> Definir meta diária de cards
+          </button>
+        )}
         {decks.length > 0 && (
           <div className="flex items-center gap-3 mb-6 flex-wrap">
             {/* Notificação cards vencidos */}

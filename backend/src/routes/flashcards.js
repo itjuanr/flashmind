@@ -2,18 +2,15 @@ const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/authMiddleware');
 const {
-  createFlashcard,
-  getCardsByDeck,
-  getCardsToStudy,
-  updateFlashcard,
-  toggleFavorite,
-  deleteFlashcard,
-  reviewCard,
+  createFlashcard, getCardsByDeck, getCardsToStudy, getFavoriteCards,
+  updateFlashcard, toggleFavorite, deleteFlashcard, reviewCard, reorderCards,
 } = require('../controllers/flashcardController');
 
 router.use(protect);
 
 router.post('/', createFlashcard);
+router.patch('/reorder', reorderCards);
+router.get('/favorites', getFavoriteCards);
 router.get('/deck/:deckId', getCardsByDeck);
 router.get('/deck/:deckId/study', getCardsToStudy);
 router.put('/:id', updateFlashcard);
