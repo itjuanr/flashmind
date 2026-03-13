@@ -1,9 +1,15 @@
 import axios from 'axios';
 
+// Verifica se existe a variável de ambiente, se não, usa o localhost
+// Se você usa Vite, o prefixo deve ser VITE_
+const baseURL = import.meta.env.VITE_API_URL 
+  ? `${import.meta.env.VITE_API_URL}/api` 
+  : 'http://localhost:5000/api';
+
 const api = axios.create({
-  baseURL: 'http://localhost:5000/api',
+  baseURL: baseURL,
   headers: { 'Content-Type': 'application/json' },
-  maxBodyLength: 50 * 1024 * 1024,    // 50mb — comporta áudio + imagem base64
+  maxBodyLength: 50 * 1024 * 1024,
   maxContentLength: 50 * 1024 * 1024,
 });
 
