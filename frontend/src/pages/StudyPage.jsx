@@ -45,11 +45,11 @@ function AudioPlayBtn({ src, side, onClick }) {
 }
 
 const SCALE = [
-  { score: 1, label: 'Não sabia',     color: 'text-red-500',     bg: 'bg-red-500/10 hover:bg-red-500/20 border-red-500/20',         days: 1  },
-  { score: 2, label: 'Errei',         color: 'text-orange-400',  bg: 'bg-orange-500/10 hover:bg-orange-500/20 border-orange-500/20', days: 1  },
-  { score: 3, label: 'Mais ou menos', color: 'text-amber-400',   bg: 'bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/20',    days: 3  },
-  { score: 4, label: 'Acertei',       color: 'text-emerald-400', bg: 'bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/20', days: 7  },
-  { score: 5, label: 'Dominei!',      color: 'text-blue-400',    bg: 'bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/20',       days: 14 },
+  { score: 1, label: 'Não sabia',     color: 'text-red-500',     rawColor: '#ef4444', bg: 'bg-red-500/10 hover:bg-red-500/20 border-red-500/20',         days: 1  },
+  { score: 2, label: 'Errei',         color: 'text-orange-400',  rawColor: '#fb923c', bg: 'bg-orange-500/10 hover:bg-orange-500/20 border-orange-500/20', days: 1  },
+  { score: 3, label: 'Mais ou menos', color: 'text-amber-400',   rawColor: '#fbbf24', bg: 'bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/20',    days: 3  },
+  { score: 4, label: 'Acertei',       color: 'text-emerald-400', rawColor: '#34d399', bg: 'bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/20', days: 7  },
+  { score: 5, label: 'Dominei!',      color: 'text-blue-400',    rawColor: '#60a5fa', bg: 'bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/20',       days: 14 },
 ];
 
 const TIMER_OPTIONS = [0, 15, 30, 60]; // 0 = desativado
@@ -650,16 +650,24 @@ export default function StudyPage() {
         <div className="fixed inset-0 z-[80] pointer-events-none flex items-center justify-center">
           <div
             key={scoreAnim.score + Date.now()}
-            className="flex flex-col items-center gap-2 animate-score-pop"
+            className="animate-score-pop flex flex-col items-center gap-3"
           >
-            <span className={`text-7xl font-black ${scoreAnim.color} drop-shadow-lg`} style={{
-              textShadow: '0 0 40px currentColor',
-            }}>
-              {scoreAnim.score}
-            </span>
-            <span className={`text-lg font-bold ${scoreAnim.color} opacity-90`}>
-              {scoreAnim.label}
-            </span>
+            {/* Pill colorido com número grande */}
+            <div className="relative">
+              <div className="absolute inset-0 blur-2xl opacity-40 rounded-full scale-150"
+                style={{ backgroundColor: scoreAnim.rawColor }} />
+              <div className="relative rounded-3xl px-10 py-6 flex flex-col items-center gap-2"
+                style={{ backgroundColor: `${scoreAnim.rawColor}22`, border: `2px solid ${scoreAnim.rawColor}55` }}>
+                <span className="text-8xl font-black leading-none"
+                  style={{ color: scoreAnim.rawColor, textShadow: `0 0 30px ${scoreAnim.rawColor}` }}>
+                  {scoreAnim.score}
+                </span>
+                <span className="text-base font-bold tracking-wide"
+                  style={{ color: scoreAnim.rawColor }}>
+                  {scoreAnim.label}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -668,10 +676,19 @@ export default function StudyPage() {
 
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          <button onClick={() => index > 0 ? setConfirmExit(true) : navigate(deckId ? `/deck/${deckId}` : '/dashboard')}
-            className="flex items-center gap-1.5 text-slate-500 hover:text-white text-sm transition-colors group">
-            <ArrowLeft size={15} className="group-hover:-translate-x-0.5 transition-transform" /> Sair
-          </button>
+          <div className="flex items-center gap-3">
+            <button onClick={() => index > 0 ? setConfirmExit(true) : navigate(deckId ? `/deck/${deckId}` : '/dashboard')}
+              className="flex items-center gap-1.5 text-slate-500 hover:text-white text-sm transition-colors group">
+              <ArrowLeft size={15} className="group-hover:-translate-x-0.5 transition-transform" /> Sair
+            </button>
+            {/* Botão voltar card — sempre visível quando há histórico */}
+            {history.length > 0 && (
+              <button onClick={handleUndo}
+                className="flex items-center gap-1.5 text-xs text-slate-600 hover:text-blue-400 transition-all px-2.5 py-1.5 rounded-lg hover:bg-blue-500/10 border border-transparent hover:border-blue-500/20">
+                <RotateCcw size={12} /> Voltar
+              </button>
+            )}
+          </div>
 
           <div className="flex flex-col items-center gap-1">
             {deck?.dueMode && (
@@ -772,16 +789,7 @@ export default function StudyPage() {
 
           {/* Escala 1-5 */}
           <div className={`w-full mt-5 transition-all duration-300 ${flipped && !answered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'}`}>
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-slate-600 text-xs uppercase tracking-widest font-semibold">Como foi?</p>
-              {/* Botão voltar card anterior */}
-              {history.length > 0 && (
-                <button onClick={handleUndo}
-                  className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-blue-400 transition-colors px-2 py-1 rounded-lg hover:bg-blue-500/10">
-                  <RotateCcw size={12} /> Voltar card
-                </button>
-              )}
-            </div>
+            <p className="text-slate-600 text-xs uppercase tracking-widest font-semibold mb-3 text-center">Como foi?</p>
             <div className="grid grid-cols-5 gap-2">
               {SCALE.map(({ score, label, color, bg }) => (
                 <button key={score} onClick={() => handleScore(score)}
@@ -808,4 +816,4 @@ export default function StudyPage() {
       </main>
     </div>
   );
-}
+}d

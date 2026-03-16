@@ -110,6 +110,7 @@ exports.toggleFavoriteDeck = async (req, res) => {
 // @route   POST /api/decks/:id/clone
 exports.cloneDeck = async (req, res) => {
   try {
+    const mongoose = require('mongoose');
     const original = await Deck.findById(req.params.id);
     if (!original || original.userId.toString() !== req.user.id)
       return res.status(404).json({ message: 'Deck não encontrado.' });
@@ -122,14 +123,16 @@ exports.cloneDeck = async (req, res) => {
     });
     const cards = await Flashcard.find({ deckId: original._id }).lean();
     if (cards.length > 0) {
+      const userObjId = new mongoose.Types.ObjectId(req.user.id);
       const mapped = cards.map((c) => ({
-        userId: req.user.id, deckId: clone._id,
-        front: c.front, back: c.back,
-        frontImage: c.frontImage, backImage: c.backImage,
-        frontAudio: c.frontAudio, backAudio: c.backAudio,
-        notes: c.notes, cardColor: c.cardColor, position: c.position,
+        userId: userObjId,
+        deckId: clone._id,
+        front: c.front || '', back: c.back || '',
+        frontImage: c.frontImage || null, backImage: c.backImage || null,
+        frontAudio: c.frontAudio || null, backAudio: c.backAudio || null,
+        notes: c.notes || '', cardColor: c.cardColor || null,
+        position: c.position || 0,
       }));
-      // Inserir em lotes de 50 para não sobrecarregar
       const BATCH = 50;
       for (let i = 0; i < mapped.length; i += BATCH) {
         await Flashcard.insertMany(mapped.slice(i, i + BATCH), { ordered: false });
@@ -137,6 +140,7 @@ exports.cloneDeck = async (req, res) => {
     }
     res.status(201).json({ ...clone.toObject(), flashcardCount: cards.length });
   } catch (error) {
+    console.error('cloneDeck error:', error.message);
     res.status(500).json({ message: 'Erro ao clonar deck.', error: error.message });
   }
 };
