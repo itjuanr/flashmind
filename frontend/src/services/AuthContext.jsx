@@ -3,38 +3,44 @@ import api from '../services/api';
 
 const AuthContext = createContext(null);
 
-// Duração da sessão: 7 dias em ms
-const SESSION_DURATION = 7 * 24 * 60 * 60 * 1000;
-const SESSION_KEY  = 'fm_token';
-const EXPIRY_KEY   = 'fm_token_expiry';
+const SESSION_KEY = 'fm_token';
+const EXPIRY_KEY  = 'fm_token_expiry';
+const SESSION_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 dias
 
 function saveSession(token) {
-  const expiry = Date.now() + SESSION_DURATION;
   localStorage.setItem(SESSION_KEY, token);
-  localStorage.setItem(EXPIRY_KEY, expiry.toString());
+  localStorage.setItem(EXPIRY_KEY, (Date.now() + SESSION_DURATION).toString());
 }
 
 function clearSession() {
   localStorage.removeItem(SESSION_KEY);
   localStorage.removeItem(EXPIRY_KEY);
+  localStorage.removeItem('token'); // limpa chave legada também
 }
 
 function getValidToken() {
+  // Migração: se ainda tiver o token legado, migra para fm_token
+  const legacy = localStorage.getItem('token');
+  if (legacy) {
+    saveSession(legacy);
+    localStorage.removeItem('token');
+    return legacy;
+  }
+
   const token  = localStorage.getItem(SESSION_KEY);
   const expiry = parseInt(localStorage.getItem(EXPIRY_KEY) || '0', 10);
-  if (!token || !expiry) return null;
-  if (Date.now() > expiry) { clearSession(); return null; } // expirado
+  if (!token) return null;
+  // Se não tiver expiry (token antigo sem expiração), renova
+  if (!expiry) { saveSession(token); return token; }
+  if (Date.now() > expiry) { clearSession(); return null; }
   return token;
 }
 
-// Renova o timer de expiração a cada interação do usuário (max 1x por minuto)
 function touchSession() {
   const token = localStorage.getItem(SESSION_KEY);
   if (!token) return;
   const expiry = parseInt(localStorage.getItem(EXPIRY_KEY) || '0', 10);
-  const timeLeft = expiry - Date.now();
-  // Renova se faltar menos de 6 dias (ou seja, já usou pelo menos 1 dia)
-  if (timeLeft < 6 * 24 * 60 * 60 * 1000) {
+  if (!expiry || (expiry - Date.now()) < 6 * 24 * 60 * 60 * 1000) {
     localStorage.setItem(EXPIRY_KEY, (Date.now() + SESSION_DURATION).toString());
   }
 }
@@ -44,7 +50,6 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const touchTimer = useRef(null);
 
-  // Recupera sessão ao carregar
   useEffect(() => {
     const token = getValidToken();
     if (!token) { setLoading(false); return; }
@@ -77,9 +82,7 @@ export function AuthProvider({ children }) {
   // Verifica expiração a cada minuto
   useEffect(() => {
     const id = setInterval(() => {
-      if (user && !getValidToken()) {
-        setUser(null); // token expirou, desloga silenciosamente
-      }
+      if (user && !getValidToken()) setUser(null);
     }, 60_000);
     return () => clearInterval(id);
   }, [user]);
