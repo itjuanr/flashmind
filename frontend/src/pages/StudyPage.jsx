@@ -652,21 +652,20 @@ export default function StudyPage() {
             key={scoreAnim.score + Date.now()}
             className="animate-score-pop flex flex-col items-center gap-3"
           >
-            {/* Pill colorido com número grande */}
-            <div className="relative">
-              <div className="absolute inset-0 blur-2xl opacity-40 rounded-full scale-150"
-                style={{ backgroundColor: scoreAnim.rawColor }} />
-              <div className="relative rounded-3xl px-10 py-6 flex flex-col items-center gap-2"
-                style={{ backgroundColor: `${scoreAnim.rawColor}22`, border: `2px solid ${scoreAnim.rawColor}55` }}>
-                <span className="text-8xl font-black leading-none"
-                  style={{ color: scoreAnim.rawColor, textShadow: `0 0 30px ${scoreAnim.rawColor}` }}>
-                  {scoreAnim.score}
-                </span>
-                <span className="text-base font-bold tracking-wide"
-                  style={{ color: scoreAnim.rawColor }}>
-                  {scoreAnim.label}
-                </span>
-              </div>
+            <div className="relative rounded-3xl px-12 py-8 flex flex-col items-center gap-2"
+              style={{
+                backgroundColor: '#0A0A14',
+                border: `2px solid ${scoreAnim.rawColor}`,
+                boxShadow: `0 0 40px ${scoreAnim.rawColor}55, 0 0 80px ${scoreAnim.rawColor}22`,
+              }}>
+              <span className="text-8xl font-black leading-none"
+                style={{ color: scoreAnim.rawColor }}>
+                {scoreAnim.score}
+              </span>
+              <span className="text-base font-bold tracking-wide"
+                style={{ color: scoreAnim.rawColor }}>
+                {scoreAnim.label}
+              </span>
             </div>
           </div>
         </div>
