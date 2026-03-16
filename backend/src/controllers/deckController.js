@@ -120,14 +120,21 @@ exports.cloneDeck = async (req, res) => {
       color: original.color, emoji: original.emoji,
       deckImage: original.deckImage, tags: original.tags,
     });
-    const cards = await Flashcard.find({ deckId: original._id });
-    if (cards.length > 0) await Flashcard.insertMany(cards.map((c) => ({
-      userId: req.user.id, deckId: clone._id,
-      front: c.front, back: c.back,
-      frontImage: c.frontImage, backImage: c.backImage,
-      frontAudio: c.frontAudio, backAudio: c.backAudio,
-      notes: c.notes, cardColor: c.cardColor,
-    })));
+    const cards = await Flashcard.find({ deckId: original._id }).lean();
+    if (cards.length > 0) {
+      const mapped = cards.map((c) => ({
+        userId: req.user.id, deckId: clone._id,
+        front: c.front, back: c.back,
+        frontImage: c.frontImage, backImage: c.backImage,
+        frontAudio: c.frontAudio, backAudio: c.backAudio,
+        notes: c.notes, cardColor: c.cardColor, position: c.position,
+      }));
+      // Inserir em lotes de 50 para não sobrecarregar
+      const BATCH = 50;
+      for (let i = 0; i < mapped.length; i += BATCH) {
+        await Flashcard.insertMany(mapped.slice(i, i + BATCH), { ordered: false });
+      }
+    }
     res.status(201).json({ ...clone.toObject(), flashcardCount: cards.length });
   } catch (error) {
     res.status(500).json({ message: 'Erro ao clonar deck.', error: error.message });

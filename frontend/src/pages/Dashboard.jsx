@@ -461,7 +461,7 @@ export default function Dashboard() {
       {/* Modal confirmar reset */}
       {confirmReset && (
         <div className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-sm glass rounded-3xl border border-white/10 p-8 text-center">
+          <div className="w-full max-w-sm bg-[#0F0F18] rounded-3xl border border-white/10 p-8 text-center">
             <div className="text-4xl mb-4">🔄</div>
             <h3 className="text-white font-bold text-lg mb-2">Resetar histórico?</h3>
             <p className="text-slate-500 text-sm mb-8">A taxa de acerto e os dados de estudo serão apagados permanentemente. Os seus decks e flashcards continuam intactos.</p>
@@ -480,7 +480,7 @@ export default function Dashboard() {
       {/* Modal confirmar exclusão */}
       {confirmDelete && (
         <div className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-sm glass rounded-3xl border border-white/10 p-8 text-center">
+          <div className="w-full max-w-sm bg-[#0F0F18] rounded-3xl border border-white/10 p-8 text-center">
             <div className="text-4xl mb-4">🗑️</div>
             <h3 className="text-white font-bold text-lg mb-2">Excluir deck?</h3>
             <p className="text-slate-500 text-sm mb-8">O deck <span className="text-white font-medium">"{confirmDelete.name}"</span> e todos os seus flashcards serão removidos permanentemente.</p>

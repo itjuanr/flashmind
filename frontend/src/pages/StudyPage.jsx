@@ -321,6 +321,8 @@ export default function StudyPage() {
 
   const [countdown, setCountdown] = useState(0); // 3-2-1-0=go
   const [wrongCards, setWrongCards] = useState([]); // cards errados para revisão rápida
+  const [scoreAnim, setScoreAnim]   = useState(null); // { score, label, color } para animação
+  const [history, setHistory]       = useState([]); // histórico para permitir voltar
 
   useEffect(() => {
     if (customCards) {
@@ -413,9 +415,18 @@ export default function StudyPage() {
     if (answered || !flipped) return;
     clearInterval(timerRef.current);
     setAnswered(true);
+
+    // Salvar no histórico para poder voltar
+    setHistory((prev) => [...prev, { index, scores: [...scores], wrongCards: [...wrongCards] }]);
+
+    // Animação da nota escolhida
+    const chosen = SCALE.find((s) => s.score === score);
+    setScoreAnim(chosen);
+    setTimeout(() => setScoreAnim(null), 900);
+
     const nextScores = [...scores, score];
     setScores(nextScores);
-    if (score <= 2) setWrongCards((prev) => [...prev, cards[index]]); // guarda errados
+    if (score <= 2) setWrongCards((prev) => [...prev, cards[index]]);
     const days = SCALE.find((s) => s.score === score)?.days || 1;
     try { await api.put(`/flashcards/${cards[index]._id}/review`, { days }); } catch {}
     setAnimating(true);
@@ -426,7 +437,19 @@ export default function StudyPage() {
       if (index + 1 >= cards.length) { await saveSession(nextScores); setDone(true); }
       else setIndex((v) => v + 1);
     }, 350);
-  }, [answered, flipped, scores, cards, index]);
+  }, [answered, flipped, scores, cards, index, wrongCards]);
+
+  const handleUndo = () => {
+    if (history.length === 0) return;
+    const prev = history[history.length - 1];
+    setHistory((h) => h.slice(0, -1));
+    setIndex(prev.index);
+    setScores(prev.scores);
+    setWrongCards(prev.wrongCards);
+    setFlipped(true);  // mostra verso já virado para poder reavaliar
+    setAnswered(false);
+    setAnimating(false);
+  };
 
   const handleFavorite = async () => {
     const card = cards[index];
@@ -622,6 +645,25 @@ export default function StudyPage() {
 
       {!focusMode && <Navbar />}
 
+      {/* ── Animação da nota escolhida ── */}
+      {scoreAnim && (
+        <div className="fixed inset-0 z-[80] pointer-events-none flex items-center justify-center">
+          <div
+            key={scoreAnim.score + Date.now()}
+            className="flex flex-col items-center gap-2 animate-score-pop"
+          >
+            <span className={`text-7xl font-black ${scoreAnim.color} drop-shadow-lg`} style={{
+              textShadow: '0 0 40px currentColor',
+            }}>
+              {scoreAnim.score}
+            </span>
+            <span className={`text-lg font-bold ${scoreAnim.color} opacity-90`}>
+              {scoreAnim.label}
+            </span>
+          </div>
+        </div>
+      )}
+
       <main className={`flex-1 flex flex-col max-w-2xl mx-auto w-full px-6 pb-10 relative z-10 ${focusMode ? 'pt-8' : 'pt-28'}`}>
 
         {/* Header */}
@@ -730,11 +772,20 @@ export default function StudyPage() {
 
           {/* Escala 1-5 */}
           <div className={`w-full mt-5 transition-all duration-300 ${flipped && !answered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'}`}>
-            <p className="text-center text-slate-600 text-xs mb-3 uppercase tracking-widest font-semibold">Como foi?</p>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-slate-600 text-xs uppercase tracking-widest font-semibold">Como foi?</p>
+              {/* Botão voltar card anterior */}
+              {history.length > 0 && (
+                <button onClick={handleUndo}
+                  className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-blue-400 transition-colors px-2 py-1 rounded-lg hover:bg-blue-500/10">
+                  <RotateCcw size={12} /> Voltar card
+                </button>
+              )}
+            </div>
             <div className="grid grid-cols-5 gap-2">
               {SCALE.map(({ score, label, color, bg }) => (
                 <button key={score} onClick={() => handleScore(score)}
-                  className={`flex flex-col items-center gap-1.5 py-3 rounded-xl border font-semibold transition-all text-xs ${bg} ${color}`}>
+                  className={`flex flex-col items-center gap-1.5 py-3 rounded-xl border font-semibold transition-all text-xs active:scale-95 ${bg} ${color}`}>
                   <span className="text-base font-bold">{score}</span>
                   <span className="leading-tight text-center">{label}</span>
                 </button>
