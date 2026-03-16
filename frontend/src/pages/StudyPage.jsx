@@ -792,9 +792,10 @@ export default function StudyPage() {
             <div className="grid grid-cols-5 gap-2">
               {SCALE.map(({ score, label, color, bg }) => (
                 <button key={score} onClick={() => handleScore(score)}
-                  className={`flex flex-col items-center gap-1.5 py-3 rounded-xl border font-semibold transition-all text-xs active:scale-95 ${bg} ${color}`}>
-                  <span className="text-base font-bold">{score}</span>
-                  <span className="leading-tight text-center">{label}</span>
+                  className={`flex flex-col items-center justify-center gap-1.5 rounded-xl border font-semibold transition-all text-xs active:scale-95 ${bg} ${color}`}
+                  style={{ height: '72px' }}>
+                  <span className="text-base font-bold leading-none">{score}</span>
+                  <span className="leading-tight text-center px-1">{label}</span>
                 </button>
               ))}
             </div>
