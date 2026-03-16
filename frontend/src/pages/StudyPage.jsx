@@ -565,7 +565,7 @@ export default function StudyPage() {
       {/* Modal confirmação de saída */}
       {confirmExit && (
         <div className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-sm glass rounded-3xl border border-white/10 p-8 text-center">
+          <div className="w-full max-w-sm bg-[#0F0F18] rounded-3xl border border-white/10 p-8 text-center">
             <div className="text-4xl mb-4">⚠️</div>
             <h3 className="text-white font-bold text-lg mb-2">Sair da sessão?</h3>
             <p className="text-slate-500 text-sm mb-8">
@@ -588,7 +588,7 @@ export default function StudyPage() {
       {/* Modal de edição inline */}
       {editingCard && (
         <div className="fixed inset-0 bg-black/75 z-[60] flex items-center justify-center p-4">
-          <div className="w-full max-w-md glass rounded-3xl border border-white/10 flex flex-col" style={{ maxHeight: '90vh' }}>
+          <div className="w-full max-w-md bg-[#0F0F18] rounded-3xl border border-white/10 flex flex-col" style={{ maxHeight: '90vh' }}>
             {/* Header fixo */}
             <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-white/8 flex-shrink-0">
               <h3 className="text-white font-bold">Editar card</h3>
