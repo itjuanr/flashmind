@@ -816,4 +816,4 @@ export default function StudyPage() {
       </main>
     </div>
   );
-}d
+}
