@@ -3,14 +3,15 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import GlobalSearch from './GlobalSearch';
-import { Sparkles, LayoutDashboard, Star, LogOut, ChevronDown, Menu, X, Sun, Moon, BarChart2, Bell, Mail, BookOpen, Play } from 'lucide-react';
+import { Sparkles, LayoutDashboard, Star, LogOut, ChevronDown, Menu, X, Sun, Moon, BarChart2, Bell, Mail, BookOpen, Play, GraduationCap } from 'lucide-react';
 import api from '../services/api';
 
 const navLinks = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/favorites', label: 'Favoritos', icon: Star },
-  { to: '/stats',     label: 'Stats',     icon: BarChart2 },
-  { to: '/contact',   label: 'Contato',   icon: Mail },
+  { to: '/notebook',  label: 'Caderno',   icon: GraduationCap   },
+  { to: '/favorites', label: 'Favoritos', icon: Star            },
+  { to: '/stats',     label: 'Stats',     icon: BarChart2       },
+  { to: '/contact',   label: 'Contato',   icon: Mail            },
 ];
 
 export default function Navbar() {

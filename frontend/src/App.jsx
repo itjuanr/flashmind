@@ -14,6 +14,9 @@ import FavoritesPage from './pages/FavoritesPage';
 import StatsPage from './pages/StatsPage';
 import SharePage from './pages/SharePage';
 import ContactPage from './pages/ContactPage';
+import NotebookPage from './pages/NotebookPage';
+import SubjectPage from './pages/SubjectPage';
+import NotePage from './pages/NotePage';
 
 export default function App() {
   return (
@@ -27,6 +30,9 @@ export default function App() {
               <Route path="/register" element={<Register />} />
               <Route path="/share/:token" element={<SharePage />} />
               <Route path="/contact" element={<ContactPage />} />
+              <Route path="/notebook" element={<PrivateRoute><NotebookPage /></PrivateRoute>} />
+              <Route path="/notebook/:subjectId" element={<PrivateRoute><SubjectPage /></PrivateRoute>} />
+              <Route path="/notebook/:subjectId/:noteId" element={<PrivateRoute><NotePage /></PrivateRoute>} />
               <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
               <Route path="/deck/:deckId" element={<PrivateRoute><DeckPage /></PrivateRoute>} />
               <Route path="/study/:deckId" element={<PrivateRoute><StudyPage /></PrivateRoute>} />

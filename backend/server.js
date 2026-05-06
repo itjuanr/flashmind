@@ -8,7 +8,8 @@ const authRoutes = require('./src/routes/auth');
 const deckRoutes = require('./src/routes/decks');
 const flashcardRoutes = require('./src/routes/flashcards');
 const studyRoutes = require('./src/routes/study');
-const searchRoutes = require('./src/routes/search');
+const searchRoutes   = require('./src/routes/search');
+const notebookRoutes = require('./src/routes/notebook');
 
 connectDB();
 
@@ -41,8 +42,9 @@ app.get('/api/health', (_, res) => res.json({ status: 'ok' }));
 app.use('/api/auth', authRoutes);
 app.use('/api/decks', deckRoutes);
 app.use('/api/flashcards', flashcardRoutes);
-app.use('/api/study', studyRoutes);
-app.use('/api/search', searchRoutes);
+app.use('/api/study',     studyRoutes);
+app.use('/api/search',    searchRoutes);
+app.use('/api/notebook',  notebookRoutes);
 
 // Handler genérico de erros
 app.use((err, req, res, next) => {
