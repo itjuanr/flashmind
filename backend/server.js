@@ -18,6 +18,7 @@ const notebookRoutes  = require('./src/routes/notebook');
 connectDB();
 
 const app = express();
+app.set('trust proxy', 1);
 
 // ── 1. Helmet — headers de segurança HTTP ────────────────────────────────────
 app.use(helmet({
