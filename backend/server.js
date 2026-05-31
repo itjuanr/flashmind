@@ -1,13 +1,12 @@
 require('dotenv').config();
-const express        = require('express');
-const cors           = require('cors');
-const helmet         = require('helmet');
-const rateLimit      = require('express-rate-limit');
-const mongoSanitize  = require('express-mongo-sanitize');
-const hpp            = require('hpp');
-const connectDB      = require('./src/config/db');
+const express       = require('express');
+const cors          = require('cors');
+const helmet        = require('helmet');
+const rateLimit     = require('express-rate-limit');
+const mongoSanitize = require('express-mongo-sanitize');
+const hpp           = require('hpp');
+const connectDB     = require('./src/config/db');
 
-// Rotas
 const authRoutes      = require('./src/routes/auth');
 const deckRoutes      = require('./src/routes/decks');
 const flashcardRoutes = require('./src/routes/flashcards');
@@ -18,14 +17,14 @@ const notebookRoutes  = require('./src/routes/notebook');
 connectDB();
 
 const app = express();
+
+// Necessário para rate limit funcionar corretamente atrás do proxy do Render
 app.set('trust proxy', 1);
 
-// ── 1. Helmet — headers de segurança HTTP ────────────────────────────────────
-app.use(helmet({
-  crossOriginResourcePolicy: { policy: 'cross-origin' },
-}));
+// ── Helmet ───────────────────────────────────────────────────────────────────
+app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 
-// ── 2. CORS — origens permitidas ─────────────────────────────────────────────
+// ── CORS ─────────────────────────────────────────────────────────────────────
 const ALLOWED_ORIGINS = [
   process.env.CLIENT_URL,
   'http://localhost:5173',
@@ -40,53 +39,28 @@ app.use(cors({
   credentials: true,
 }));
 
-// ── 3. Rate limiting ──────────────────────────────────────────────────────────
-// Global: 200 req/15min por IP
-app.use(rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 200,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { message: 'Muitas requisições. Tente novamente em alguns minutos.' },
-}));
-
-// Auth: 10 tentativas/15min (brute force)
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 10,
-  message: { message: 'Muitas tentativas de login. Aguarde 15 minutos.' },
-  skipSuccessfulRequests: true, // só conta erros
-});
-
-// E-mail reset/verify: 5/hora (previne spam)
-const emailLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000,
-  max: 5,
-  message: { message: 'Muitas solicitações de e-mail. Aguarde 1 hora.' },
-});
-
-// ── 4. Body parser com limite seguro ─────────────────────────────────────────
+// ── Body parsers ─────────────────────────────────────────────────────────────
+// 50mb para rotas que recebem imagens/áudios em base64
 app.use('/api/flashcards', express.json({ limit: '50mb' }));
 app.use('/api/notebook',   express.json({ limit: '50mb' }));
-app.use(express.json({ limit: '1mb' })); // padrão para todo o resto
+// 1mb para todo o resto
+app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ limit: '1mb', extended: true }));
 
-
-// ── CORREÇÃO EXPRESS 5: Desbloquear mutabilidade do req.query ────────────────
-app.use((req, res, next) => {
+// ── Fix: req.query mutável (Express 5 / proxy) ───────────────────────────────
+app.use((req, _res, next) => {
   if (req.query) {
-    Object.defineProperty(req, 'query', {
-      value: { ...req.query },
-      writable: true,
-      configurable: true,
-      enumerable: true,
-    });
+    try {
+      Object.defineProperty(req, 'query', {
+        value: { ...req.query },
+        writable: true, configurable: true, enumerable: true,
+      });
+    } catch {}
   }
   next();
 });
 
-
-// ── 5. Sanitização contra NoSQL injection ────────────────────────────────────
+// ── Sanitização NoSQL ────────────────────────────────────────────────────────
 app.use(mongoSanitize({
   replaceWith: '_',
   onSanitize: ({ req, key }) => {
@@ -94,24 +68,46 @@ app.use(mongoSanitize({
   },
 }));
 
-// ── 6. HPP — proteção contra poluição de parâmetros HTTP ─────────────────────
+// ── HPP ──────────────────────────────────────────────────────────────────────
 app.use(hpp());
-
-// ── 7. Remover header que revela tecnologia ───────────────────────────────────
 app.disable('x-powered-by');
 
+// ── Rate limiters ─────────────────────────────────────────────────────────────
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  skipSuccessfulRequests: true,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Muitas tentativas. Aguarde 15 minutos.' },
+});
+
+const emailLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Muitas solicitações de e-mail. Aguarde 1 hora.' },
+});
+
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Muitas requisições. Tente novamente em minutos.' },
+});
+
+app.use(globalLimiter);
+app.use('/api/auth/login',               authLimiter);
+app.use('/api/auth/register',            authLimiter);
+app.use('/api/auth/forgot-password',     emailLimiter);
+app.use('/api/auth/resend-verification', emailLimiter);
+
 // ── Health check ──────────────────────────────────────────────────────────────
-app.get('/api/health', (_, res) => res.json({ status: 'ok' }));
+app.get('/api/health', (_, res) => res.json({ status: 'ok', ts: new Date() }));
 
-
-// ── CORREÇÃO DOS LIMITERS: Aplicando direto nos caminhos corretos ─────────────
-app.use('/api/auth/login',                authLimiter);
-app.use('/api/auth/register',             authLimiter);
-app.use('/api/auth/forgot-password',      emailLimiter);
-app.use('/api/auth/resend-verification',  emailLimiter);
-
-
-// ── Rotas principais ──────────────────────────────────────────────────────────
+// ── Rotas ────────────────────────────────────────────────────────────────────
 app.use('/api/auth',       authRoutes);
 app.use('/api/decks',      deckRoutes);
 app.use('/api/flashcards', flashcardRoutes);
@@ -119,14 +115,11 @@ app.use('/api/study',      studyRoutes);
 app.use('/api/search',     searchRoutes);
 app.use('/api/notebook',   notebookRoutes);
 
-// ── Handler de erros ──────────────────────────────────────────────────────────
+// ── Error handler ─────────────────────────────────────────────────────────────
 app.use((err, req, res, next) => {
+  if (err.type === 'entity.too.large')
+    return res.status(413).json({ message: 'Arquivo muito grande.' });
   const isDev = process.env.NODE_ENV === 'development';
-  
-  if (err.type === 'entity.too.large') {
-    return res.status(413).json({ message: 'O arquivo ou texto enviado é muito grande.' });
-  }
-
   console.error(`[ERROR] ${req.method} ${req.path}:`, err.message);
   res.status(err.status || 500).json({
     message: isDev ? err.message : 'Algo deu errado no servidor.',
@@ -135,9 +128,7 @@ app.use((err, req, res, next) => {
 });
 
 // ── 404 ───────────────────────────────────────────────────────────────────────
-app.use((req, res) => {
-  res.status(404).json({ message: 'Rota não encontrada.' });
-});
+app.use((_req, res) => res.status(404).json({ message: 'Rota não encontrada.' }));
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));

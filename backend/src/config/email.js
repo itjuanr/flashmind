@@ -1,14 +1,20 @@
 const nodemailer = require('nodemailer');
 
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
-
 const BASE_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+
+// Cria transporter sob demanda para garantir que as env vars já foram carregadas
+function createTransporter() {
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    throw new Error('EMAIL_USER e EMAIL_PASS não configurados nas variáveis de ambiente.');
+  }
+  return nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+  });
+}
 
 function emailBase(title, content) {
   return `<!DOCTYPE html>
@@ -23,30 +29,20 @@ function emailBase(title, content) {
     <tr><td align="center">
       <table width="520" cellpadding="0" cellspacing="0" style="background:#0F0F18;border:1px solid rgba(255,255,255,0.08);border-radius:20px;overflow:hidden;">
 
-        <!-- Header -->
         <tr>
           <td style="padding:28px 36px;border-bottom:1px solid rgba(255,255,255,0.06);">
-            <table cellpadding="0" cellspacing="0">
-              <tr>
-                <td style="padding-right:8px;">
-                  <div style="width:28px;height:28px;background:rgba(37,99,235,0.15);border-radius:8px;display:inline-flex;align-items:center;justify-content:center;font-size:14px;line-height:28px;text-align:center;">⚡</div>
-                </td>
-                <td>
-                  <span style="font-size:18px;font-weight:900;color:#ffffff;letter-spacing:-0.5px;">Flash<span style="color:#60a5fa;">Mind</span></span>
-                </td>
-              </tr>
-            </table>
+            <span style="font-size:18px;font-weight:900;color:#ffffff;letter-spacing:-0.5px;">
+              ⚡ Flash<span style="color:#60a5fa;">Mind</span>
+            </span>
           </td>
         </tr>
 
-        <!-- Conteúdo -->
         <tr>
           <td style="padding:36px 36px 28px;">
             ${content}
           </td>
         </tr>
 
-        <!-- Footer -->
         <tr>
           <td style="padding:20px 36px;border-top:1px solid rgba(255,255,255,0.06);">
             <p style="margin:0;font-size:11px;color:#475569;line-height:1.6;">
@@ -64,7 +60,7 @@ function emailBase(title, content) {
 }
 
 exports.sendConfirmationEmail = async (user, token) => {
-  const link = `${BASE_URL}/verify-email/${token}`;
+  const link = `${process.env.FRONTEND_URL || BASE_URL}/verify-email/${token}`;
   const html = emailBase('Confirme seu e-mail — FlashMind', `
     <h2 style="margin:0 0 12px;font-size:24px;font-weight:900;color:#ffffff;letter-spacing:-0.5px;">
       Confirme seu e-mail ✉️
@@ -73,15 +69,16 @@ exports.sendConfirmationEmail = async (user, token) => {
       Olá, <strong style="color:#e2e8f0;">${user.name}</strong>!<br>
       Obrigado por criar sua conta no FlashMind. Clique no botão abaixo para confirmar seu e-mail e começar a estudar.
     </p>
-    <a href="${link}" style="display:inline-block;background:#2563eb;color:#ffffff;font-weight:700;font-size:14px;padding:14px 32px;border-radius:12px;text-decoration:none;letter-spacing:0.2px;">
+    <a href="${link}" style="display:inline-block;background:#2563eb;color:#ffffff;font-weight:700;font-size:14px;padding:14px 32px;border-radius:12px;text-decoration:none;">
       Confirmar e-mail →
     </a>
     <p style="margin:24px 0 0;font-size:12px;color:#475569;line-height:1.6;">
       Este link expira em <strong style="color:#64748b;">24 horas</strong>.<br>
-      Ou copie e cole: <span style="color:#60a5fa;">${link}</span>
+      Ou copie: <span style="color:#60a5fa;">${link}</span>
     </p>
   `);
 
+  const transporter = createTransporter();
   await transporter.sendMail({
     from: `"FlashMind" <${process.env.EMAIL_USER}>`,
     to: user.email,
@@ -91,7 +88,7 @@ exports.sendConfirmationEmail = async (user, token) => {
 };
 
 exports.sendPasswordResetEmail = async (user, token) => {
-  const link = `${BASE_URL}/reset-password/${token}`;
+  const link = `${process.env.FRONTEND_URL || BASE_URL}/reset-password/${token}`;
   const html = emailBase('Redefinir senha — FlashMind', `
     <h2 style="margin:0 0 12px;font-size:24px;font-weight:900;color:#ffffff;letter-spacing:-0.5px;">
       Redefinir senha 🔑
@@ -100,21 +97,22 @@ exports.sendPasswordResetEmail = async (user, token) => {
       Olá, <strong style="color:#e2e8f0;">${user.name}</strong>!<br>
       Recebemos uma solicitação para redefinir a senha da sua conta FlashMind.
     </p>
-    <a href="${link}" style="display:inline-block;background:#2563eb;color:#ffffff;font-weight:700;font-size:14px;padding:14px 32px;border-radius:12px;text-decoration:none;letter-spacing:0.2px;">
+    <a href="${link}" style="display:inline-block;background:#2563eb;color:#ffffff;font-weight:700;font-size:14px;padding:14px 32px;border-radius:12px;text-decoration:none;">
       Redefinir minha senha →
     </a>
     <table cellpadding="0" cellspacing="0" style="margin-top:24px;">
       <tr>
         <td style="background:rgba(37,99,235,0.08);border:1px solid rgba(37,99,235,0.2);border-radius:10px;padding:14px 18px;">
           <p style="margin:0;font-size:12px;color:#64748b;line-height:1.6;">
-            ⏱ Este link expira em <strong style="color:#94a3b8;">1 hora</strong>.<br>
-            🔒 Se você não solicitou, ignore este e-mail — sua senha continua a mesma.
+            ⏱ Expira em <strong style="color:#94a3b8;">1 hora</strong>.<br>
+            🔒 Se não foi você, ignore este e-mail.
           </p>
         </td>
       </tr>
     </table>
   `);
 
+  const transporter = createTransporter();
   await transporter.sendMail({
     from: `"FlashMind" <${process.env.EMAIL_USER}>`,
     to: user.email,
@@ -122,5 +120,3 @@ exports.sendPasswordResetEmail = async (user, token) => {
     html,
   });
 };
-
-exports.transporter = transporter;

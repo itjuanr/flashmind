@@ -38,7 +38,7 @@ exports.register = async (req, res) => {
     const exists = await User.findOne({ email }).select('_id').lean();
     if (exists) return res.status(400).json({ message: 'Este e-mail já está cadastrado.' });
 
-    const hashed      = await bcrypt.hash(password, 12);
+    const hashed      = await bcrypt.hash(password, 10);
     const verifyToken = crypto.randomBytes(32).toString('hex');
 
     const user = await User.create({
@@ -190,7 +190,7 @@ exports.resetPassword = async (req, res) => {
     }).select('+password');
     if (!user) return res.status(400).json({ message: 'Link inválido ou expirado. Solicite um novo.' });
 
-    user.password          = await bcrypt.hash(password, 12);
+    user.password          = await bcrypt.hash(password, 10);
     user.resetToken        = undefined;
     user.resetTokenExpires = undefined;
     await user.save();
