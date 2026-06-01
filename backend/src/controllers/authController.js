@@ -48,11 +48,15 @@ exports.register = async (req, res) => {
       verifyTokenExpires: new Date(Date.now() + 24 * 60 * 60 * 1000),
     });
 
-    try { await sendConfirmationEmail(user, verifyToken); } catch (e) {
-      console.error('Erro ao enviar e-mail de confirmação:', e.message);
-    }
-
+    // Responde imediatamente — não espera o e-mail ser enviado
     res.status(201).json({ token: signToken(user._id), user: userPayload(user) });
+
+    // Envia e-mail em background (não bloqueia a resposta)
+    setImmediate(() => {
+      sendConfirmationEmail(user, verifyToken).catch(e => {
+        console.error('Erro ao enviar e-mail de confirmação:', e.message);
+      });
+    });
   } catch (e) {
     console.error('register error:', e.message);
     res.status(500).json({ message: 'Erro ao registrar. Tente novamente.' });
@@ -163,14 +167,15 @@ exports.forgotPassword = async (req, res) => {
     user.resetTokenExpires = new Date(Date.now() + 60 * 60 * 1000);
     await user.save();
 
-    try {
-      await sendPasswordResetEmail(user, token);
-    } catch (e) {
-      console.error('Erro ao enviar e-mail de reset:', e.message);
-      return res.status(500).json({ message: 'Erro ao enviar e-mail. Tente novamente.' });
-    }
-
+    // Responde imediatamente
     res.json({ message: SAFE_MSG });
+
+    // Envia e-mail em background
+    setImmediate(() => {
+      sendPasswordResetEmail(user, token).catch(e => {
+        console.error('Erro ao enviar e-mail de reset:', e.message);
+      });
+    });
   } catch (e) { res.status(500).json({ message: 'Erro ao processar solicitação.' }); }
 };
 
@@ -214,7 +219,14 @@ exports.resendVerification = async (req, res) => {
     user.verifyTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
     await user.save();
 
-    await sendConfirmationEmail(user, token);
+    // Responde imediatamente
     res.json({ message: 'E-mail de confirmação reenviado!' });
+
+    // Envia em background
+    setImmediate(() => {
+      sendConfirmationEmail(user, token).catch(e => {
+        console.error('Erro ao reenviar confirmação:', e.message);
+      });
+    });
   } catch (e) { res.status(500).json({ message: 'Erro ao reenviar e-mail.' }); }
 };
