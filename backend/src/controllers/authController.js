@@ -206,27 +206,36 @@ exports.resetPassword = async (req, res) => {
 // ── POST /api/auth/resend-verification ───────────────────────────────────────
 exports.resendVerification = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
+    // req.user vem do middleware protect — se chegou aqui, o token é válido
+    const userId = req.user?.id || req.user?._id;
+    if (!userId) return res.status(401).json({ message: 'Não autorizado.' });
+
+    const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: 'Usuário não encontrado.' });
     if (user.isVerified) return res.status(400).json({ message: 'E-mail já verificado.' });
 
-    // Cooldown: não reenvia se o token ainda tem mais de 23h de vida
-    if (user.verifyTokenExpires && user.verifyTokenExpires > new Date(Date.now() + 23 * 60 * 60 * 1000))
-      return res.status(429).json({ message: 'Aguarde antes de solicitar outro e-mail.' });
+    // Cooldown suave: 1 minuto entre reenvios (não 23h)
+    if (
+      user.verifyTokenExpires &&
+      user.verifyTokenExpires > new Date(Date.now() + (24 * 60 * 60 * 1000) - 60 * 1000)
+    ) {
+      return res.status(429).json({ message: 'Aguarde 1 minuto antes de solicitar outro e-mail.' });
+    }
 
     const token = crypto.randomBytes(32).toString('hex');
     user.verifyToken        = token;
     user.verifyTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
     await user.save();
 
-    // Responde imediatamente
     res.json({ message: 'E-mail de confirmação reenviado!' });
 
-    // Envia em background
     setImmediate(() => {
       sendConfirmationEmail(user, token).catch(e => {
         console.error('Erro ao reenviar confirmação:', e.message);
       });
     });
-  } catch (e) { res.status(500).json({ message: 'Erro ao reenviar e-mail.' }); }
+  } catch (e) {
+    console.error('resendVerification error:', e.message);
+    res.status(500).json({ message: 'Erro ao reenviar e-mail.' });
+  }
 };
