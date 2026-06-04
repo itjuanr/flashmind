@@ -9,8 +9,8 @@ import {
   Plus, Book, Play, Trash2, X, Loader2, BrainCircuit,
   LayoutGrid, Pencil, Check, Star, RotateCcw, Image,
   BookOpen, GripVertical, ListOrdered, ChevronUp,
-  ArrowDownAZ, ArrowUpAZ, Clock, Flame, Copy, Tag,
-  SortAsc, ChevronDown, Sparkles, Bell,
+  ArrowDownAZ, ArrowUpAZ, Clock, Flame, Files, Tag,
+  SortAsc, ChevronDown, Sparkles, Bell, Keyboard,
 } from 'lucide-react';
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
@@ -142,18 +142,23 @@ function DeckModal({ onClose, onSaved, editing, toast }) {
               </div>
             </div>
             {iconMode === 'emoji' ? (
-            <div className="flex gap-2 flex-wrap">
-              {emojis.map((em) => (
-                <button key={em} type="button" onClick={() => setForm({ ...form, emoji: em })}
-                  className={`w-10 h-10 rounded-xl text-lg flex items-center justify-center transition-all ${form.emoji === em ? 'bg-blue-500/20 ring-2 ring-blue-500/50' : isDark ? 'bg-white/5 hover:bg-white/10' : 'bg-black/5 hover:bg-black/10'}`}>
-                  {em}
-                </button>
-              ))}
-              <input type="text" maxLength="2" title="Pressione Win + . para emojis" placeholder="+"
-                value={emojis.includes(form.emoji) ? '' : form.emoji}
-                onChange={(e) => setForm({ ...form, emoji: e.target.value })}
-                className={`w-10 h-10 rounded-xl text-lg text-center outline-none transition-all ${!emojis.includes(form.emoji) && form.emoji ? 'bg-blue-500/20 ring-2 ring-blue-500/50 text-blue-400' : isDark ? 'bg-white/5 hover:bg-white/10 text-slate-300 placeholder-slate-500' : 'bg-black/5 hover:bg-black/10 text-slate-700 placeholder-slate-400'}`}
-              />
+            <div>
+              <div className="flex gap-2 flex-wrap">
+                {emojis.map((em) => (
+                  <button key={em} type="button" onClick={() => setForm({ ...form, emoji: em })}
+                    className={`w-10 h-10 rounded-xl text-lg flex items-center justify-center transition-all ${form.emoji === em ? 'bg-blue-500/20 ring-2 ring-blue-500/50' : isDark ? 'bg-white/5 hover:bg-white/10' : 'bg-black/5 hover:bg-black/10'}`}>
+                    {em}
+                  </button>
+                ))}
+                <input type="text" maxLength="2" placeholder="+"
+                  value={emojis.includes(form.emoji) ? '' : form.emoji}
+                  onChange={(e) => setForm({ ...form, emoji: e.target.value })}
+                  className={`w-10 h-10 rounded-xl text-lg text-center outline-none transition-all ${!emojis.includes(form.emoji) && form.emoji ? 'bg-blue-500/20 ring-2 ring-blue-500/50 text-blue-400' : isDark ? 'bg-white/5 hover:bg-white/10 text-slate-300 placeholder-slate-500' : 'bg-black/5 hover:bg-black/10 text-slate-700 placeholder-slate-400'}`}
+                />
+              </div>
+              <p className="text-[10px] text-slate-500 mt-2.5">
+                💡 Dica: Pressione <strong className="font-semibold">Win + .</strong> (Windows) ou <strong className="font-semibold">Cmd + Ctrl + Espaço</strong> (Mac) para emojis.
+              </p>
             </div>
             ) : (
               <div>
@@ -325,6 +330,7 @@ export default function Dashboard() {
   const [sortBy, setSortBy]         = useState('recent');
   const [showSort, setShowSort]     = useState(false);
   const [activeTag, setActiveTag]   = useState(null); // tag ativa para filtrar
+  const [showShortcuts, setShowShortcuts] = useState(false);
 
   // Drag-and-drop
   const [studyQueue, setStudyQueue]       = useState([]);
@@ -355,6 +361,19 @@ export default function Dashboard() {
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
       document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
     }
+  }, []);
+
+  // Atalho global: Ctrl+D (ou Cmd+D) para criar novo deck
+  useEffect(() => {
+    const handler = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') {
+        e.preventDefault(); // Bloqueia o atalho nativo de "Adicionar Favorito" do navegador
+        setEditing(null);
+        setShowModal(true);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
   }, []);
 
   // Todas as tags disponíveis
@@ -447,6 +466,12 @@ export default function Dashboard() {
   // Badge de cards vencidos total
   const totalDue = decks.reduce((a, d) => (d.reviewSettings?.notify !== false ? a + (d.dueCount || 0) : a), 0);
 
+  const Kbd = ({ children }) => (
+    <kbd className={`px-1.5 py-0.5 rounded text-[10px] font-mono border shadow-sm ${isDark ? 'bg-white/10 border-white/10 text-slate-300' : 'bg-black/5 border-black/10 text-slate-600'}`}>
+      {children}
+    </kbd>
+  );
+
   return (
     <div className={`min-h-screen text-slate-200 ${isDark ? 'bg-[#0A0A0F]' : 'bg-[#F0F2F8]'}`}>
       <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[700px] h-[300px] bg-blue-600/5 blur-[120px] rounded-full pointer-events-none" />
@@ -510,7 +535,75 @@ export default function Dashboard() {
             <h1 className="text-3xl font-bold text-white tracking-tight">Seus decks</h1>
           </div>
           <div className="flex items-center gap-2 self-start sm:self-auto">
+            {/* Popover de Atalhos */}
+            <div className="relative">
+              <button
+                onClick={() => setShowShortcuts((v) => !v)}
+                className={`p-3 rounded-xl border transition-all flex items-center justify-center ${isDark ? 'bg-white/5 border-white/8 hover:bg-white/10 text-slate-400 hover:text-white' : 'bg-black/4 border-black/8 hover:bg-black/8 text-slate-500 hover:text-slate-800'}`}
+                title="Ver atalhos de teclado"
+              >
+                <Keyboard size={17} />
+              </button>
+              {showShortcuts && (
+                <>
+                  <div className="fixed inset-0 z-20" onClick={() => setShowShortcuts(false)} />
+                  <div className={`absolute right-0 top-full mt-2 w-72 p-5 rounded-2xl border shadow-xl z-30 ${isDark ? 'bg-[#0F0F18] border-white/10' : 'bg-white border-black/8'}`}>
+                    <div className="flex items-center gap-2 mb-4">
+                      <Keyboard size={16} className={isDark ? 'text-slate-300' : 'text-slate-700'} />
+                      <h4 className={`font-bold text-sm ${isDark ? 'text-white' : 'text-slate-800'}`}>Atalhos do FlashMind</h4>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-slate-500">Busca global</span>
+                        <div className="flex items-center gap-1"><Kbd>Ctrl / ⌘</Kbd><span className="text-slate-500 text-[10px]">+</span><Kbd>K</Kbd></div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-slate-500">Novo deck</span>
+                        <div className="flex items-center gap-1"><Kbd>Ctrl / ⌘</Kbd><span className="text-slate-500 text-[10px]">+</span><Kbd>D</Kbd></div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-slate-500">Nova matéria</span>
+                        <div className="flex items-center gap-1"><Kbd>Ctrl / ⌘</Kbd><span className="text-slate-500 text-[10px]">+</span><Kbd>N</Kbd></div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-slate-500">Painel de Emojis</span>
+                        <div className="flex items-center gap-1"><Kbd>Win / ⌘</Kbd><span className="text-slate-500 text-[10px]">+</span><Kbd>.</Kbd></div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-slate-500">Mudar tema</span>
+                        <div className="flex items-center gap-1"><Kbd>Ctrl / ⌘</Kbd><span className="text-slate-500 text-[10px]">+</span><Kbd>J</Kbd></div>
+                      </div>
+                      
+                      <div className={`pt-3 mt-3 border-t ${isDark ? 'border-white/10' : 'border-black/5'}`}>
+                        <p className={`text-[9px] font-bold uppercase tracking-widest mb-3 ${isDark ? 'text-slate-600' : 'text-slate-400'}`}>No Modo Estudo</p>
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-slate-500">Virar card</span>
+                            <Kbd>Espaço</Kbd>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-slate-500">Avaliar card</span>
+                            <div className="flex items-center gap-1"><Kbd>1</Kbd><span className="text-slate-500 text-[10px]">a</span><Kbd>5</Kbd></div>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-slate-500">Favoritar</span>
+                            <Kbd>F</Kbd>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-slate-500">Editar</span>
+                            <Kbd>E</Kbd>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
             <button
+              title="Atalho: Ctrl + D"
               onClick={() => { setEditing(null); setShowModal(true); }}
               className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-xl font-semibold transition-all shadow-[0_0_20px_rgba(37,99,235,0.25)] flex items-center gap-2 group text-sm">
               <Plus size={17} className="group-hover:rotate-90 transition-transform duration-200" /> Criar deck
@@ -733,7 +826,7 @@ export default function Dashboard() {
                     </button>
                     <button onClick={() => handleClone(deck)} title="Duplicar deck"
                       className="p-2 rounded-lg text-slate-500 hover:text-blue-400 hover:bg-blue-500/10 transition-all">
-                      <Copy size={14} />
+                      <Files size={14} />
                     </button>
                     <button onClick={() => { setEditing(deck); setShowModal(true); }}
                       className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-white/10 transition-all">

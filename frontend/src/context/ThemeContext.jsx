@@ -19,6 +19,18 @@ export function ThemeProvider({ children }) {
 
   const toggle = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
 
+  // Atalho global: Ctrl+J (ou Cmd+J) para alternar tema
+  useEffect(() => {
+    const handler = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'j') {
+        e.preventDefault();
+        setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
+
   return (
     <ThemeContext.Provider value={{ theme, toggle }}>
       {children}

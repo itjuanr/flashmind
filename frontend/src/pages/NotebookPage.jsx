@@ -61,19 +61,24 @@ function SubjectModal({ isDark, onClose, onSaved, editing }) {
           </div>
 
           {/* Emojis */}
-          <div className="flex gap-2 flex-wrap">
-            {EMOJIS.map(e => (
-              <button key={e} type="button" onClick={()=>setEmoji(e)}
-                className={`w-9 h-9 rounded-lg text-lg flex items-center justify-center transition-all ${
-                  emoji===e ? 'bg-blue-500/20 ring-2 ring-blue-500/40' : isDark ? 'hover:bg-white/8' : 'hover:bg-black/6'
-                }`}>{e}</button>
-            ))}
-          
-          <input type="text" maxLength="2" title="Pressione Win + . para emojis" placeholder="+"
-            value={EMOJIS.includes(emoji) ? '' : emoji}
-            onChange={(e) => setEmoji(e.target.value)}
-            className={`w-9 h-9 rounded-lg text-lg text-center outline-none transition-all ${!EMOJIS.includes(emoji) && emoji ? 'bg-blue-500/20 ring-2 ring-blue-500/40 text-blue-400' : isDark ? 'bg-white/4 hover:bg-white/8 text-slate-300 placeholder-slate-500' : 'bg-black/4 hover:bg-black/6 text-slate-700 placeholder-slate-400'}`}
-          />
+          <div>
+            <div className="flex gap-2 flex-wrap">
+              {EMOJIS.map(e => (
+                <button key={e} type="button" onClick={()=>setEmoji(e)}
+                  className={`w-9 h-9 rounded-lg text-lg flex items-center justify-center transition-all ${
+                    emoji===e ? 'bg-blue-500/20 ring-2 ring-blue-500/40' : isDark ? 'hover:bg-white/8' : 'hover:bg-black/6'
+                  }`}>{e}</button>
+              ))}
+            
+              <input type="text" maxLength="2" placeholder="+"
+                value={EMOJIS.includes(emoji) ? '' : emoji}
+                onChange={(e) => setEmoji(e.target.value)}
+                className={`w-9 h-9 rounded-lg text-lg text-center outline-none transition-all ${!EMOJIS.includes(emoji) && emoji ? 'bg-blue-500/20 ring-2 ring-blue-500/40 text-blue-400' : isDark ? 'bg-white/4 hover:bg-white/8 text-slate-300 placeholder-slate-500' : 'bg-black/4 hover:bg-black/6 text-slate-700 placeholder-slate-400'}`}
+              />
+            </div>
+            <p className="text-[10px] text-slate-500 mt-2.5">
+              💡 Dica: Pressione <strong className="font-semibold">Win + .</strong> (Windows) ou <strong className="font-semibold">Cmd + Ctrl + Espaço</strong> (Mac) para emojis.
+            </p>
           </div>
 
           {/* Semestre */}
@@ -141,6 +146,19 @@ export default function NotebookPage() {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
+  // Atalho global: Ctrl+N (ou Cmd+N) para criar nova matéria
+  useEffect(() => {
+    const handler = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'n') {
+        e.preventDefault(); // Bloqueia a abertura de nova janela do navegador
+        setEditing(null);
+        setShowModal(true);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
+
   const handleSaved = (subject, isEdit) => {
     if (isEdit) setSubjects(prev => prev.map(s => s._id === subject._id ? subject : s));
     else setSubjects(prev => [subject, ...prev]);
@@ -188,6 +206,7 @@ export default function NotebookPage() {
             <p className="text-slate-500 text-sm ml-1">Suas anotações de aula organizadas por matéria</p>
           </div>
           <button onClick={() => { setEditing(null); setShowModal(true); }}
+            title="Atalho: Ctrl + N"
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold px-4 py-2.5 rounded-xl transition-all text-sm shadow-[0_0_20px_rgba(37,99,235,0.25)]">
             <Plus size={16}/> Nova matéria
           </button>

@@ -617,7 +617,8 @@ export default function DeckPage() {
                       )}
                       <button onClick={() => { setShowImport(true); setShowDeckMenu(false); }}
                         className={`w-full flex items-center gap-2.5 px-4 py-3 text-sm transition-all ${isDark ? 'text-slate-300 hover:bg-white/8' : 'text-slate-700 hover:bg-black/4'}`}>
-                        <FileUp size={14} className="text-slate-500" /> Importar CSV
+                        <FileUp size={14} className="text-slate-500" /> Importar flashcards
+                        <span className="ml-auto flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold text-white uppercase tracking-widest animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)] bg-gradient-to-r from-emerald-500 to-teal-400">Novo!</span>
                       </button>
                       <button
                         onClick={() => {
@@ -630,7 +631,7 @@ export default function DeckPage() {
                         }}
                         disabled={sharing}
                         className={`w-full flex items-center gap-2.5 px-4 py-3 text-sm transition-all ${shareToken ? 'text-emerald-400 hover:bg-emerald-500/10' : isDark ? 'text-slate-300 hover:bg-white/8' : 'text-slate-700 hover:bg-black/4'}`}>
-                        <Link size={14} className="text-slate-500" /> {shareToken ? 'Link ativo (ver)' : 'Compartilhar deck'}
+                        <Link size={14} className="text-slate-500" /> {shareToken ? 'Gerenciar link público' : 'Gerar link público'}
                       </button>
                       <div className={`h-px mx-3 ${isDark ? 'bg-white/8' : 'bg-black/6'}`} />
                       <button onClick={() => { setConfirmDeleteDeck(true); setShowDeckMenu(false); }}

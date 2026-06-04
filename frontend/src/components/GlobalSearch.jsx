@@ -28,7 +28,13 @@ export default function GlobalSearch() {
 
   useEffect(() => {
     const handler = (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); setOpen(true); }
+      const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+      const isK = e.key.toLowerCase() === 'k';
+      const isShiftF = e.shiftKey && e.key.toLowerCase() === 'f';
+      
+      if (isCtrlOrCmd && (isK || isShiftF)) { 
+        e.preventDefault(); setOpen(true); 
+      }
       if (e.key === 'Escape') setOpen(false);
     };
     window.addEventListener('keydown', handler);
@@ -88,7 +94,7 @@ export default function GlobalSearch() {
         }`}>
         <Search size={14} />
         <span className="hidden sm:inline">Buscar</span>
-        <kbd className={`hidden sm:inline text-[10px] px-1.5 py-0.5 rounded font-mono ${isDark ? 'bg-white/8 text-slate-500' : 'bg-black/8 text-slate-400'}`}>⌘K</kbd>
+        <kbd title="Ou Ctrl + Shift + F" className={`hidden sm:inline text-[10px] px-1.5 py-0.5 rounded font-mono ${isDark ? 'bg-white/8 text-slate-500' : 'bg-black/8 text-slate-400'}`}>⌘K</kbd>
       </button>
 
       {open && (

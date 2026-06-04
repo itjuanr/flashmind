@@ -477,6 +477,11 @@ export default function StudyPage() {
       }
       if ((e.key === 'f' || e.key === 'F') && !answered) handleFavorite();
       if ((e.key === 'e' || e.key === 'E') && !answered) handleEdit();
+      if (e.key === 'a' || e.key === 'A') {
+        e.preventDefault();
+        const src = flipped ? cards[index]?.backAudio : cards[index]?.frontAudio;
+        if (src) playAudio(src);
+      }
       const num = parseInt(e.key);
       if (num >= 1 && num <= 5 && flipped && !answered) handleScore(num);
     };
@@ -808,6 +813,8 @@ export default function StudyPage() {
             <kbd className={`px-1.5 py-0.5 rounded text-[10px] font-mono mx-1 ${isDark ? 'bg-white/8 text-slate-400' : 'bg-black/8 text-slate-500'}`}>F</kbd>favoritar
             {' · '}
             <kbd className={`px-1.5 py-0.5 rounded text-[10px] font-mono mx-1 ${isDark ? 'bg-white/8 text-slate-400' : 'bg-black/8 text-slate-500'}`}>E</kbd>editar
+        {' · '}
+        <kbd className={`px-1.5 py-0.5 rounded text-[10px] font-mono mx-1 ${isDark ? 'bg-white/8 text-slate-400' : 'bg-black/8 text-slate-500'}`}>A</kbd>áudio
             {flipped && !answered && (
               <> · <kbd className={`px-1.5 py-0.5 rounded text-[10px] font-mono mx-1 ${isDark ? 'bg-white/8 text-slate-400' : 'bg-black/8 text-slate-500'}`}>1–5</kbd>avaliar</>
             )}
