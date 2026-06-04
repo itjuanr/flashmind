@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { Loader2, BookOpen, Copy, Check, ArrowLeft, Download } from 'lucide-react';
+import Navbar from '../components/Navbar';
+import { useTheme } from '../context/ThemeContext';
 import api from '../services/api';
 
 export default function SharePage() {
@@ -10,6 +12,8 @@ export default function SharePage() {
   const navigate  = useNavigate();
   const { user }  = useAuth();
   const toast     = useToast();
+  const { theme } = useTheme();
+  const isDark    = theme === 'dark';
 
   const [data, setData]       = useState(null);  // { deck, cards }
   const [loading, setLoading] = useState(true);
@@ -25,13 +29,17 @@ export default function SharePage() {
   }, [token]);
 
   const handleClone = async () => {
-    if (!user) { navigate('/login'); return; }
+    if (!user) {
+      toast('Faça login ou crie uma conta para salvar este deck.', 'info');
+      navigate('/login', { state: { from: `/share/${token}` } });
+      return;
+    }
     setCloning(true);
     try {
       const res = await api.post(`/decks/share/${token}/clone`);
       toast(`"${data.deck.name}" adicionado aos seus decks!`, 'success');
       navigate(`/deck/${res.data._id}`);
-    } catch { toast('Erro ao clonar deck.', 'error'); }
+    } catch (err) { toast(err.response?.data?.message || 'Erro ao clonar deck.', 'error'); }
     finally { setCloning(false); }
   };
 
@@ -59,10 +67,31 @@ export default function SharePage() {
   const { deck, cards } = data;
 
   return (
-    <div className="min-h-screen text-slate-200" style={{ backgroundColor: 'var(--bg)' }}>
+    <div className="min-h-screen text-slate-200 flex flex-col" style={{ backgroundColor: 'var(--bg)' }}>
       <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-blue-600/5 blur-[120px] rounded-full pointer-events-none" />
 
-      <main className="max-w-2xl mx-auto px-6 pt-16 pb-16 relative z-10">
+      {user ? <Navbar /> : (
+        <header className="flex justify-between items-center px-6 py-6 max-w-6xl mx-auto w-full relative z-20">
+          <div className="flex items-center gap-2">
+            <img src="https://i.imgur.com/jXDsNEh.png" alt="FlashMind Logo" className="w-12 h-12 object-contain" />
+            <span className={`font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-800'}`}>
+              Flash<span className="text-blue-400">Mind</span>
+            </span>
+          </div>
+          <div className="flex items-center gap-3">
+            <button onClick={() => navigate('/login', { state: { from: `/share/${token}` } })}
+              className={`text-sm font-medium px-4 py-2 rounded-xl transition-all ${isDark ? 'text-slate-400 hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-black/5'}`}>
+              Entrar
+            </button>
+            <button onClick={() => navigate('/register', { state: { from: `/share/${token}` } })}
+              className="bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-all shadow-[0_0_20px_rgba(37,99,235,0.25)]">
+              Criar conta
+            </button>
+          </div>
+        </header>
+      )}
+
+      <main className={`max-w-2xl mx-auto px-6 pb-16 relative z-10 w-full flex-1 ${user ? 'pt-28' : 'pt-10'}`}>
         {/* Header */}
         <div className="text-center mb-10">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-medium mb-6">
@@ -114,9 +143,11 @@ export default function SharePage() {
           )}
         </div>
 
-        <div className="mt-10 text-center">
-          <a href="/" className="text-blue-400 text-sm hover:underline">Criar minha conta no FlashMind</a>
-        </div>
+        {!user && (
+          <div className="mt-10 text-center">
+            <a href="/" className="text-blue-400 text-sm hover:underline">Ir para a página inicial do FlashMind</a>
+          </div>
+        )}
       </main>
     </div>
   );

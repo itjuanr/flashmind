@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { LogIn, ArrowLeft, Eye, EyeOff, Sparkles, CheckCircle2 } from 'lucide-react';
 import api from '../services/api';
 
-function RedirectScreen({ name }) {
+function RedirectScreen({ name, from }) {
   return (
     <div className="min-h-screen flex items-center justify-center p-6" style={{ backgroundColor: 'var(--bg)' }}>
       <div className="flex flex-col items-center gap-5 text-center">
@@ -13,7 +13,9 @@ function RedirectScreen({ name }) {
         </div>
         <div>
           <p className="text-white font-bold text-xl">Bem-vindo de volta{name ? `, ${name.split(' ')[0]}` : ''}! 👋</p>
-          <p className="text-slate-500 text-sm mt-1">Redirecionando para o dashboard...</p>
+          <p className="text-slate-500 text-sm mt-1">
+            Redirecionando{from !== '/dashboard' ? '...' : ' para o dashboard...'}
+          </p>
         </div>
         <div className="flex items-center gap-1.5">
           {[0,1,2].map(i => (
@@ -28,6 +30,8 @@ function RedirectScreen({ name }) {
 export default function Login() {
   const { login }   = useAuth();
   const navigate    = useNavigate();
+  const location    = useLocation();
+  const from        = location.state?.from || '/dashboard';
 
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
@@ -54,7 +58,7 @@ export default function Login() {
       
       setTimeout(() => {
         login(res.data.user, res.data.token);
-        navigate('/dashboard');
+        navigate(from);
       }, 1800);
     } catch (err) {
       const msg   = err.response?.data?.message || 'E-mail ou senha incorretos.';
@@ -67,7 +71,7 @@ export default function Login() {
     }
   };
 
-  if (redirecting) return <RedirectScreen name={userName} />;
+  if (redirecting) return <RedirectScreen name={userName} from={from} />;
 
   const hasError = !!errors.email || !!errors.password || !!errors.general;
   const fieldBorder = (field) => errors[field]

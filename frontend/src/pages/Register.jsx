@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Sparkles, Eye, EyeOff, Loader2, ArrowLeft, ChevronRight, ChevronLeft, Check } from 'lucide-react';
 import api from '../services/api';
@@ -54,6 +54,8 @@ function OptionGrid({ options, value, onChange }) {
 export default function Register() {
   const { login }    = useAuth();
   const navigate     = useNavigate();
+  const location     = useLocation();
+  const from         = location.state?.from || '/dashboard';
 
   const [step, setStep]     = useState(1);
   const [loading, setLoading] = useState(false);
@@ -97,7 +99,7 @@ export default function Register() {
       // Registra o usuário e inicializa a sessão via AuthContext imediatamente
       const res = await api.post('/auth/register', { name, email, password, studyGoal, studyArea, howFound });
       login(res.data.user, res.data.token);
-      navigate('/dashboard');
+      navigate(from);
     } catch (e) {
       setError(e.response?.data?.message || 'Erro ao criar conta.');
     } finally { setLoading(false); }

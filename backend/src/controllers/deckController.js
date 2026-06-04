@@ -201,21 +201,43 @@ exports.getSharedDeck = async (req, res) => {
 exports.cloneSharedDeck = async (req, res) => {
   try {
     const userId = req.user.id;
-    const original = await Deck.findOne({ shareToken: req.params.token });
+
+    const original = await Deck.findOne({ shareToken: req.params.token }).lean();
     if (!original) return res.status(404).json({ message: 'Link inválido.' });
+
     const clone = await Deck.create({
       userId,
-      name: original.name, description: original.description,
-      color: original.color, emoji: original.emoji, tags: original.tags,
+      name: original.name, 
+      description: original.description,
+      color: original.color, 
+      emoji: original.emoji, 
+      tags: original.tags,
+      deckImage: original.deckImage,
+      reviewSettings: original.reviewSettings,
     });
-    const cards = await Flashcard.find({ deckId: original._id });
-    if (cards.length > 0) await Flashcard.insertMany(cards.map((c) => ({
-      userId, deckId: clone._id,
-      front: c.front, back: c.back,
-      frontImage: c.frontImage, backImage: c.backImage, notes: c.notes,
-    })));
+
+    const cards = await Flashcard.find({ deckId: original._id }).lean();
+    if (cards.length > 0) {
+      const userObjId = new mongoose.Types.ObjectId(userId);
+      const mapped = cards.map((c) => ({
+        userId: userObjId,
+        deckId: clone._id,
+        front: c.front || '', back: c.back || '',
+        frontImage: c.frontImage || null, backImage: c.backImage || null,
+        frontAudio: c.frontAudio || null, backAudio: c.backAudio || null,
+        notes: c.notes || '', cardColor: c.cardColor || null,
+        position: c.position || 0,
+      }));
+      
+      const BATCH = 50;
+      for (let i = 0; i < mapped.length; i += BATCH) {
+        await Flashcard.insertMany(mapped.slice(i, i + BATCH), { ordered: false });
+      }
+    }
+
     res.status(201).json({ ...clone.toObject(), flashcardCount: cards.length });
   } catch (error) {
-    res.status(500).json({ message: 'Erro ao clonar deck compartilhado.' });
+    console.error('cloneSharedDeck error:', error.message);
+    res.status(500).json({ message: 'Erro ao clonar deck compartilhado.', error: error.message });
   }
 };

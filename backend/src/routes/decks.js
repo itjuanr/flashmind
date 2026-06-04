@@ -8,13 +8,13 @@ const {
 
 // Rotas públicas (sem auth)
 router.get('/share/:token', getSharedDeck);
-router.post('/share/:token/clone', cloneSharedDeck);
 
 // Rotas protegidas
 router.use(protect);
 router.route('/').get(getDecks).post(createDeck);
 router.patch('/:id/favorite', toggleFavoriteDeck);
 router.patch('/:id/share', toggleShare);
+router.post('/share/:token/clone', cloneSharedDeck);
 router.post('/:id/clone', cloneDeck);
 router.route('/:id').get(getDeck).put(updateDeck).delete(deleteDeck);
 
