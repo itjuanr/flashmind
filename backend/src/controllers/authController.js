@@ -91,7 +91,8 @@ exports.login = async (req, res) => {
 // ── GET /api/auth/me ──────────────────────────────────────────────────────────
 exports.getMe = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id).lean();
+    const userId = req.user?.id || req.user?._id;
+    const user = await User.findById(userId).lean();
     if (!user) return res.status(404).json({ message: 'Usuário não encontrado.' });
     res.json(userPayload(user));
   } catch (e) { res.status(500).json({ message: 'Erro ao buscar usuário.' }); }
@@ -100,7 +101,8 @@ exports.getMe = async (req, res) => {
 // ── PATCH /api/auth/me ────────────────────────────────────────────────────────
 exports.updateMe = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id);
+    const userId = req.user?.id || req.user?._id;
+    const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: 'Usuário não encontrado.' });
 
     const { dailyGoal, studyGoal, studyArea } = req.body;

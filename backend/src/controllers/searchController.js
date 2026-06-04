@@ -9,7 +9,7 @@ exports.search = async (req, res) => {
     if (!q || q.length < 2) return res.json({ decks: [], cards: [] });
 
     const regex = new RegExp(q, 'i');
-    const userId = req.user._id;
+    const userId = req.user.id;
 
     const [decks, cards] = await Promise.all([
       Deck.find({ userId, $or: [{ name: regex }, { description: regex }] }).limit(6),

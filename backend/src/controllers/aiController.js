@@ -26,7 +26,7 @@ exports.generateFlashcards = async (req, res) => {
     const preparedCards = cardsArray.map(card => ({
       front: card.front,
       back: card.back,
-      userId: req.user._id,
+      userId: req.user.id,
       deckId: deckId
     }));
 

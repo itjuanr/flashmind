@@ -12,7 +12,7 @@ exports.saveSession = async (req, res) => {
     }
 
     const session = await StudySession.create({
-      userId: req.user._id,
+      userId: req.user?.id || req.user?._id,
       deckId,
       totalCards,
       correct,
@@ -29,7 +29,7 @@ exports.saveSession = async (req, res) => {
 // @route   GET /api/study/stats
 exports.getStats = async (req, res) => {
   try {
-    const userId = req.user._id;
+    const userId = req.user?.id || req.user?._id;
 
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
@@ -67,7 +67,7 @@ exports.getStats = async (req, res) => {
 exports.getFavorites = async (req, res) => {
   try {
     const favorites = await Flashcard.find({
-      userId: req.user._id,
+      userId: req.user?.id || req.user?._id,
       isFavorite: true,
     })
       .populate({ path: 'deckId', select: 'name emoji color', strictPopulate: false })
@@ -84,7 +84,7 @@ exports.getFavorites = async (req, res) => {
 // @route   DELETE /api/study/reset
 exports.resetStats = async (req, res) => {
   try {
-    const userId = req.user._id;
+    const userId = req.user?.id || req.user?._id;
     const { type = 'all', period = 'all' } = req.body;
 
     // Monta filtro de período
@@ -119,7 +119,7 @@ exports.resetStats = async (req, res) => {
 exports.getDeckHistory = async (req, res) => {
   try {
     const sessions = await StudySession.find({
-      userId: req.user._id,
+      userId: req.user?.id || req.user?._id,
       deckId: req.params.deckId,
     }).sort({ createdAt: -1 }).limit(20);
 
@@ -132,7 +132,7 @@ exports.getDeckHistory = async (req, res) => {
 // @route   GET /api/study/history?days=30
 exports.getHistory = async (req, res) => {
   try {
-    const userId = req.user._id;
+    const userId = req.user?.id || req.user?._id;
     const days = Math.min(parseInt(req.query.days) || 14, 90);
 
     const since = new Date();
@@ -197,7 +197,7 @@ const Flashcard_patch = require('../models/Flashcard');
 const origGetStats = exports.getStats;
 exports.getStats = async (req, res) => {
   try {
-    const userId = req.user._id;
+    const userId = req.user?.id || req.user?._id;
     const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
     const endOfDay   = new Date(); endOfDay.setHours(23, 59, 59, 999);
     const now = new Date();
@@ -207,7 +207,7 @@ exports.getStats = async (req, res) => {
       require('../models/StudySession').find({ userId }),
       Flashcard_patch.countDocuments({ userId, nextReview: { $lte: now } }),
       require('../models/StudySession').aggregate([
-        { $match: { userId: require('mongoose').Types.ObjectId.createFromHexString(userId), createdAt: { $gte: startOfDay, $lte: endOfDay } } },
+        { $match: { userId: require('mongoose').Types.ObjectId.createFromHexString(userId.toString()), createdAt: { $gte: startOfDay, $lte: endOfDay } } },
         { $group: { _id: null, total: { $sum: '$totalCards' } } },
       ]),
     ]);

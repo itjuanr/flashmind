@@ -17,4 +17,8 @@ const FlashcardSchema = new mongoose.Schema({
   nextReview: { type: Date, default: () => new Date(Date.now() + 24 * 60 * 60 * 1000) },
 }, { timestamps: true });
 
+// Índices compostos para máxima performance nas consultas (Dashboard e Modo Estudo)
+FlashcardSchema.index({ userId: 1, deckId: 1 });
+FlashcardSchema.index({ userId: 1, nextReview: 1 });
+
 module.exports = mongoose.model('Flashcard', FlashcardSchema);

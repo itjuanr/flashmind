@@ -6,10 +6,11 @@ const Flashcard = require('../models/Flashcard');
 // @route   POST /api/decks
 exports.createDeck = async (req, res) => {
   try {
+    const userId = req.user?.id || req.user?._id;
     const { name, description, color, emoji, deckImage, tags, reviewSettings } = req.body;
     if (!name?.trim()) return res.status(400).json({ message: 'O nome do deck é obrigatório.' });
     const deck = await Deck.create({
-      userId: req.user._id,
+      userId,
       name: name.trim(), description, color, emoji,
       deckImage: deckImage || null,
       tags: Array.isArray(tags) ? tags.map(t => t.trim().toLowerCase()).filter(Boolean) : [],
@@ -25,7 +26,8 @@ exports.createDeck = async (req, res) => {
 // @route   GET /api/decks
 exports.getDecks = async (req, res) => {
   try {
-    const decks = await Deck.find({ userId: req.user._id }).sort({ createdAt: -1 });
+    const userId = req.user?.id || req.user?._id;
+    const decks = await Deck.find({ userId }).sort({ createdAt: -1 }).lean();
     const now = new Date();
     const decksWithCount = await Promise.all(decks.map(async (deck) => {
       const [count, masteredCount, dueCount] = await Promise.all([
@@ -33,7 +35,7 @@ exports.getDecks = async (req, res) => {
         Flashcard.countDocuments({ deckId: deck._id, nextReview: { $gt: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000) } }),
         Flashcard.countDocuments({ deckId: deck._id, nextReview: { $lte: now } }),
       ]);
-      return { ...deck.toObject(), flashcardCount: count, masteredCount, dueCount };
+      return { ...deck, flashcardCount: count, masteredCount, dueCount };
     }));
     res.json(decksWithCount);
   } catch (error) {
@@ -45,8 +47,9 @@ exports.getDecks = async (req, res) => {
 // @route   GET /api/decks/:id
 exports.getDeck = async (req, res) => {
   try {
-    const deck = await Deck.findById(req.params.id);
-    if (!deck || deck.userId.toString() !== req.user._id)
+    const userId = req.user?.id || req.user?._id;
+    const deck = await Deck.findById(req.params.id).lean();
+    if (!deck || deck.userId.toString() !== String(userId))
       return res.status(404).json({ message: 'Deck não encontrado.' });
     res.json(deck);
   } catch (error) {
@@ -58,8 +61,9 @@ exports.getDeck = async (req, res) => {
 // @route   PUT /api/decks/:id
 exports.updateDeck = async (req, res) => {
   try {
+    const userId = req.user?.id || req.user?._id;
     const deck = await Deck.findById(req.params.id);
-    if (!deck || deck.userId.toString() !== req.user._id)
+    if (!deck || deck.userId.toString() !== String(userId))
       return res.status(404).json({ message: 'Deck não encontrado.' });
     const { name, description, color, emoji, deckImage, tags, reviewSettings } = req.body;
     if (name) deck.name = name.trim();
@@ -80,8 +84,9 @@ exports.updateDeck = async (req, res) => {
 // @route   DELETE /api/decks/:id
 exports.deleteDeck = async (req, res) => {
   try {
+    const userId = req.user?.id || req.user?._id;
     const deck = await Deck.findById(req.params.id);
-    if (!deck || deck.userId.toString() !== req.user._id)
+    if (!deck || deck.userId.toString() !== String(userId))
       return res.status(404).json({ message: 'Deck não encontrado.' });
     await Flashcard.deleteMany({ deckId: deck._id });
     await deck.deleteOne();
@@ -95,8 +100,9 @@ exports.deleteDeck = async (req, res) => {
 // @route   PATCH /api/decks/:id/favorite
 exports.toggleFavoriteDeck = async (req, res) => {
   try {
+    const userId = req.user?.id || req.user?._id;
     const deck = await Deck.findById(req.params.id);
-    if (!deck || deck.userId.toString() !== req.user._id)
+    if (!deck || deck.userId.toString() !== String(userId))
       return res.status(404).json({ message: 'Deck não encontrado.' });
     deck.isFavorite = !deck.isFavorite;
     await deck.save();
@@ -110,12 +116,13 @@ exports.toggleFavoriteDeck = async (req, res) => {
 // @route   POST /api/decks/:id/clone
 exports.cloneDeck = async (req, res) => {
   try {
+    const userId = req.user?.id || req.user?._id;
     const mongoose = require('mongoose');
     const original = await Deck.findById(req.params.id);
-    if (!original || original.userId.toString() !== req.user._id)
+    if (!original || original.userId.toString() !== String(userId))
       return res.status(404).json({ message: 'Deck não encontrado.' });
     const clone = await Deck.create({
-      userId: req.user._id,
+      userId,
       name: `${original.name} (cópia)`,
       description: original.description,
       color: original.color, emoji: original.emoji,
@@ -123,7 +130,7 @@ exports.cloneDeck = async (req, res) => {
     });
     const cards = await Flashcard.find({ deckId: original._id }).lean();
     if (cards.length > 0) {
-      const userObjId = new mongoose.Types.ObjectId(req.user._id);
+      const userObjId = new mongoose.Types.ObjectId(String(userId));
       const mapped = cards.map((c) => ({
         userId: userObjId,
         deckId: clone._id,
@@ -149,8 +156,9 @@ exports.cloneDeck = async (req, res) => {
 // @route   PATCH /api/decks/:id/share
 exports.toggleShare = async (req, res) => {
   try {
+    const userId = req.user?.id || req.user?._id;
     const deck = await Deck.findById(req.params.id);
-    if (!deck || deck.userId.toString() !== req.user._id)
+    if (!deck || deck.userId.toString() !== String(userId))
       return res.status(404).json({ message: 'Deck não encontrado.' });
     if (deck.shareToken) {
       deck.shareToken = null; // revogar
@@ -168,9 +176,9 @@ exports.toggleShare = async (req, res) => {
 // @route   GET /api/decks/share/:token
 exports.getSharedDeck = async (req, res) => {
   try {
-    const deck = await Deck.findOne({ shareToken: req.params.token });
+    const deck = await Deck.findOne({ shareToken: req.params.token }).lean();
     if (!deck) return res.status(404).json({ message: 'Link inválido ou expirado.' });
-    const cards = await Flashcard.find({ deckId: deck._id }).select('-frontAudio -backAudio'); // não expõe áudio
+    const cards = await Flashcard.find({ deckId: deck._id }).select('-frontAudio -backAudio').lean();
     res.json({ deck: { name: deck.name, description: deck.description, emoji: deck.emoji, color: deck.color, tags: deck.tags }, cards });
   } catch (error) {
     res.status(500).json({ message: 'Erro ao buscar deck.' });
@@ -181,16 +189,17 @@ exports.getSharedDeck = async (req, res) => {
 // @route   POST /api/decks/share/:token/clone
 exports.cloneSharedDeck = async (req, res) => {
   try {
+    const userId = req.user?.id || req.user?._id;
     const original = await Deck.findOne({ shareToken: req.params.token });
     if (!original) return res.status(404).json({ message: 'Link inválido.' });
     const clone = await Deck.create({
-      userId: req.user._id,
+      userId,
       name: original.name, description: original.description,
       color: original.color, emoji: original.emoji, tags: original.tags,
     });
     const cards = await Flashcard.find({ deckId: original._id });
     if (cards.length > 0) await Flashcard.insertMany(cards.map((c) => ({
-      userId: req.user._id, deckId: clone._id,
+      userId, deckId: clone._id,
       front: c.front, back: c.back,
       frontImage: c.frontImage, backImage: c.backImage, notes: c.notes,
     })));

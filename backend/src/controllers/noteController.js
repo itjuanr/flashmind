@@ -4,11 +4,13 @@ const Subject = require('../models/Subject');
 // GET /api/notebook/subjects/:subjectId/notes
 exports.getNotes = async (req, res) => {
   try {
-    const subject = await Subject.findOne({ _id: req.params.subjectId, userId: req.user._id });
+    const userId = req.user?.id || req.user?._id;
+    const subject = await Subject.findOne({ _id: req.params.subjectId, userId });
     if (!subject) return res.status(404).json({ message: 'Matéria não encontrada.' });
-    const notes = await Note.find({ subjectId: req.params.subjectId, userId: req.user._id })
+    const notes = await Note.find({ subjectId: req.params.subjectId, userId })
       .select('-content') // não retorna o conteúdo na listagem (pode ser grande)
-      .sort({ date: -1 });
+      .sort({ date: -1 })
+      .lean();
     res.json(notes);
   } catch (e) { res.status(500).json({ message: e.message }); }
 };
@@ -16,7 +18,8 @@ exports.getNotes = async (req, res) => {
 // GET /api/notebook/notes/:id
 exports.getNote = async (req, res) => {
   try {
-    const note = await Note.findOne({ _id: req.params.id, userId: req.user._id });
+    const userId = req.user?.id || req.user?._id;
+    const note = await Note.findOne({ _id: req.params.id, userId }).lean();
     if (!note) return res.status(404).json({ message: 'Aula não encontrada.' });
     res.json(note);
   } catch (e) { res.status(500).json({ message: e.message }); }
@@ -25,11 +28,12 @@ exports.getNote = async (req, res) => {
 // POST /api/notebook/subjects/:subjectId/notes
 exports.createNote = async (req, res) => {
   try {
-    const subject = await Subject.findOne({ _id: req.params.subjectId, userId: req.user._id });
+    const userId = req.user?.id || req.user?._id;
+    const subject = await Subject.findOne({ _id: req.params.subjectId, userId });
     if (!subject) return res.status(404).json({ message: 'Matéria não encontrada.' });
     const { title, content, date, attachments } = req.body;
     const note = await Note.create({
-      userId: req.user._id,
+      userId,
       subjectId: req.params.subjectId,
       title: title || 'Nova aula',
       content: content || '',
@@ -43,8 +47,9 @@ exports.createNote = async (req, res) => {
 // PUT /api/notebook/notes/:id
 exports.updateNote = async (req, res) => {
   try {
+    const userId = req.user?.id || req.user?._id;
     const note = await Note.findOneAndUpdate(
-      { _id: req.params.id, userId: req.user._id },
+      { _id: req.params.id, userId },
       { ...req.body, updatedAt: new Date() },
       { new: true, runValidators: true }
     );
@@ -56,7 +61,8 @@ exports.updateNote = async (req, res) => {
 // DELETE /api/notebook/notes/:id
 exports.deleteNote = async (req, res) => {
   try {
-    const note = await Note.findOneAndDelete({ _id: req.params.id, userId: req.user._id });
+    const userId = req.user?.id || req.user?._id;
+    const note = await Note.findOneAndDelete({ _id: req.params.id, userId });
     if (!note) return res.status(404).json({ message: 'Aula não encontrada.' });
     res.json({ message: 'Aula removida.' });
   } catch (e) { res.status(500).json({ message: e.message }); }
@@ -65,7 +71,8 @@ exports.deleteNote = async (req, res) => {
 // POST /api/notebook/notes/:id/attachments
 exports.addAttachment = async (req, res) => {
   try {
-    const note = await Note.findOne({ _id: req.params.id, userId: req.user._id });
+    const userId = req.user?.id || req.user?._id;
+    const note = await Note.findOne({ _id: req.params.id, userId });
     if (!note) return res.status(404).json({ message: 'Aula não encontrada.' });
     const { type, name, data, url } = req.body;
     note.attachments.push({ type, name, data, url });
@@ -77,7 +84,8 @@ exports.addAttachment = async (req, res) => {
 // DELETE /api/notebook/notes/:id/attachments/:attachId
 exports.deleteAttachment = async (req, res) => {
   try {
-    const note = await Note.findOne({ _id: req.params.id, userId: req.user._id });
+    const userId = req.user?.id || req.user?._id;
+    const note = await Note.findOne({ _id: req.params.id, userId });
     if (!note) return res.status(404).json({ message: 'Aula não encontrada.' });
     note.attachments = note.attachments.filter(a => a._id.toString() !== req.params.attachId);
     await note.save();
@@ -88,10 +96,11 @@ exports.deleteAttachment = async (req, res) => {
 // GET /api/notebook/search?q=
 exports.searchNotes = async (req, res) => {
   try {
+    const userId = req.user?.id || req.user?._id;
     const q = req.query.q || '';
     if (q.length < 2) return res.json([]);
     const notes = await Note.find({
-      userId: req.user._id,
+      userId,
       $or: [
         { title: { $regex: q, $options: 'i' } },
         { content: { $regex: q, $options: 'i' } },
@@ -100,7 +109,8 @@ exports.searchNotes = async (req, res) => {
       .select('title date subjectId')
       .populate('subjectId', 'name emoji color')
       .sort({ updatedAt: -1 })
-      .limit(20);
+      .limit(20)
+      .lean();
     res.json(notes);
   } catch (e) { res.status(500).json({ message: e.message }); }
 };
