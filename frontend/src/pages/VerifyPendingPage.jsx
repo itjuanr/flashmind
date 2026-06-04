@@ -23,19 +23,13 @@ export default function VerifyPendingPage() {
     } finally { setSending(false); }
   };
 
-  // Verifica se o usuário já confirmou o e-mail (para quando ele voltar à aba)
   const handleCheck = async () => {
     setChecking(true); setError('');
     try {
       const res = await api.get('/auth/me');
-      // Se o backend confirmar que o usuário está verificado...
       if (res.data.isVerified) {
-        // ...atualizamos o estado local no AuthContext.
-        // O componente PrivateRoute/PublicRoute detectará a mudança e fará o redirecionamento.
-        // Isso é mais limpo e rápido que um hard-reload (window.location.href).
         updateUser(res.data);
       } else {
-        // Se ainda não estiver verificado, apenas mostramos um feedback.
         setChecked(true);
         setTimeout(() => setChecked(false), 3000);
       }

@@ -53,11 +53,8 @@ function SubjectModal({ isDark, onClose, onSaved, editing }) {
         <div className="space-y-4">
           {/* Emoji + Nome */}
           <div className="flex gap-3">
-            <div className="relative">
-              <button className={`w-12 h-12 rounded-xl text-2xl flex items-center justify-center border ${isDark ? 'border-white/8 bg-white/4' : 'border-black/8 bg-black/3'}`}
-                onClick={() => {}}>
-                {emoji}
-              </button>
+            <div className={`w-12 h-12 rounded-xl text-2xl flex flex-shrink-0 items-center justify-center border ${isDark ? 'border-white/8 bg-white/4' : 'border-black/8 bg-black/3'}`}>
+              {emoji}
             </div>
             <input value={name} onChange={e=>setName(e.target.value)} placeholder="Nome da matéria *"
               className={`${inp} flex-1`} autoFocus/>
@@ -66,11 +63,17 @@ function SubjectModal({ isDark, onClose, onSaved, editing }) {
           {/* Emojis */}
           <div className="flex gap-2 flex-wrap">
             {EMOJIS.map(e => (
-              <button key={e} onClick={()=>setEmoji(e)}
+              <button key={e} type="button" onClick={()=>setEmoji(e)}
                 className={`w-9 h-9 rounded-lg text-lg flex items-center justify-center transition-all ${
                   emoji===e ? 'bg-blue-500/20 ring-2 ring-blue-500/40' : isDark ? 'hover:bg-white/8' : 'hover:bg-black/6'
                 }`}>{e}</button>
             ))}
+          
+          <input type="text" maxLength="2" title="Pressione Win + . para emojis" placeholder="+"
+            value={EMOJIS.includes(emoji) ? '' : emoji}
+            onChange={(e) => setEmoji(e.target.value)}
+            className={`w-9 h-9 rounded-lg text-lg text-center outline-none transition-all ${!EMOJIS.includes(emoji) && emoji ? 'bg-blue-500/20 ring-2 ring-blue-500/40 text-blue-400' : isDark ? 'bg-white/4 hover:bg-white/8 text-slate-300 placeholder-slate-500' : 'bg-black/4 hover:bg-black/6 text-slate-700 placeholder-slate-400'}`}
+          />
           </div>
 
           {/* Semestre */}

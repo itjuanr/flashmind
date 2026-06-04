@@ -4,7 +4,7 @@ const crypto = require('crypto');
 const User   = require('../models/User');
 const { sendConfirmationEmail, sendPasswordResetEmail } = require('../config/email');
 
-const signToken = (id) => jwt.sign({ id }, process.env.JWT_SECRET, {
+const signToken = (id) => jwt.sign({ id: id.toString() }, process.env.JWT_SECRET, {
   expiresIn: process.env.JWT_EXPIRES_IN || '7d',
 });
 
@@ -32,10 +32,12 @@ exports.register = async (req, res) => {
       return res.status(400).json({ message: 'Preencha todos os campos obrigatórios.' });
     if (!/^\S+@\S+\.\S+$/.test(email))
       return res.status(400).json({ message: 'E-mail inválido.' });
-    if (password.length < 6 || password.length > 128)
-      return res.status(400).json({ message: 'A senha deve ter entre 6 e 128 caracteres.' });
+    
+    const passRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,128}$/;
+    if (!passRegex.test(password))
+      return res.status(400).json({ message: 'A senha deve ter no mínimo 8 caracteres, contendo letras maiúsculas, minúsculas, números e símbolos.' });
 
-    const exists = await User.findOne({ email }).select('_id').lean();
+    const exists = await User.findOne({ email: new RegExp(`^${email}$`, 'i') }).select('_id').lean();
     if (exists) return res.status(400).json({ message: 'Este e-mail já está cadastrado.' });
 
     const hashed      = await bcrypt.hash(password, 10);
@@ -48,10 +50,10 @@ exports.register = async (req, res) => {
       verifyTokenExpires: new Date(Date.now() + 24 * 60 * 60 * 1000),
     });
 
-    // Responde imediatamente — não espera o e-mail ser enviado
+    // Responde ao cliente imediatamente com o token validado
     res.status(201).json({ token: signToken(user._id), user: userPayload(user) });
 
-    // Envia e-mail em background (não bloqueia a resposta)
+    // Delega o envio do e-mail de confirmação para background (não bloqueia a UI)
     setImmediate(() => {
       sendConfirmationEmail(user, verifyToken).catch(e => {
         console.error('Erro ao enviar e-mail de confirmação:', e.message);
@@ -72,10 +74,9 @@ exports.login = async (req, res) => {
     if (!email || !password)
       return res.status(400).json({ message: 'Informe e-mail e senha.' });
 
-    const user = await User.findOne({ email }).select('+password');
+    // Utiliza Regex case-insensitive para suportar contas criadas com e-mail em UpperCase
+    const user = await User.findOne({ email: new RegExp(`^${email}$`, 'i') }).select('+password');
     if (!user) {
-      // Timing attack: compara mesmo sem usuário para não revelar existência por timing
-      await bcrypt.compare(password, '$2a$12$dummyhashfortimingattackprevention00000000000000000000');
       return res.status(401).json({ message: 'E-mail não encontrado.', field: 'email' });
     }
 
@@ -153,13 +154,12 @@ exports.verifyEmail = async (req, res) => {
 
 // ── POST /api/auth/forgot-password ───────────────────────────────────────────
 exports.forgotPassword = async (req, res) => {
-  // Sempre retorna a mesma resposta para não revelar se o e-mail existe
   const SAFE_MSG = 'Se este e-mail estiver cadastrado, você receberá um link em breve.';
   try {
     const email = sanitize(req.body.email, 200).toLowerCase();
     if (!email) return res.json({ message: SAFE_MSG });
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: new RegExp(`^${email}$`, 'i') });
     if (!user) return res.json({ message: SAFE_MSG });
 
     const token = crypto.randomBytes(32).toString('hex');
@@ -167,10 +167,8 @@ exports.forgotPassword = async (req, res) => {
     user.resetTokenExpires = new Date(Date.now() + 60 * 60 * 1000);
     await user.save();
 
-    // Responde imediatamente
     res.json({ message: SAFE_MSG });
 
-    // Envia e-mail em background
     setImmediate(() => {
       sendPasswordResetEmail(user, token).catch(e => {
         console.error('Erro ao enviar e-mail de reset:', e.message);
@@ -186,8 +184,10 @@ exports.resetPassword = async (req, res) => {
       return res.status(400).json({ message: 'Token inválido.' });
 
     const password = typeof req.body.password === 'string' ? req.body.password : '';
-    if (password.length < 6 || password.length > 128)
-      return res.status(400).json({ message: 'A nova senha deve ter entre 6 e 128 caracteres.' });
+    
+    const passRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,128}$/;
+    if (!passRegex.test(password))
+      return res.status(400).json({ message: 'A nova senha deve ter no mínimo 8 caracteres, contendo letras maiúsculas, minúsculas, números e símbolos.' });
 
     const user = await User.findOne({
       resetToken: req.params.token,
@@ -206,14 +206,13 @@ exports.resetPassword = async (req, res) => {
 // ── POST /api/auth/resend-verification ───────────────────────────────────────
 exports.resendVerification = async (req, res) => {
   try {
-    // req.user vem do middleware protect — se chegou aqui, o token é válido
     if (!req.user.id) return res.status(401).json({ message: 'Não autorizado.' });
 
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ message: 'Usuário não encontrado.' });
     if (user.isVerified) return res.status(400).json({ message: 'E-mail já verificado.' });
 
-    // Cooldown suave: 1 minuto entre reenvios (não 23h)
+    // Rate limiter customizado: Permite o reenvio de confirmação a cada 1 minuto
     if (
       user.verifyTokenExpires &&
       user.verifyTokenExpires > new Date(Date.now() + (24 * 60 * 60 * 1000) - 60 * 1000)

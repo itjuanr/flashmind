@@ -142,14 +142,19 @@ function DeckModal({ onClose, onSaved, editing, toast }) {
               </div>
             </div>
             {iconMode === 'emoji' ? (
-              <div className="flex gap-2 flex-wrap">
-                {emojis.map((em) => (
-                  <button key={em} type="button" onClick={() => setForm({ ...form, emoji: em })}
-                    className={`w-10 h-10 rounded-xl text-lg flex items-center justify-center transition-all ${form.emoji === em ? 'bg-blue-500/20 ring-2 ring-blue-500/50' : isDark ? 'bg-white/5 hover:bg-white/10' : 'bg-black/5 hover:bg-black/10'}`}>
-                    {em}
-                  </button>
-                ))}
-              </div>
+            <div className="flex gap-2 flex-wrap">
+              {emojis.map((em) => (
+                <button key={em} type="button" onClick={() => setForm({ ...form, emoji: em })}
+                  className={`w-10 h-10 rounded-xl text-lg flex items-center justify-center transition-all ${form.emoji === em ? 'bg-blue-500/20 ring-2 ring-blue-500/50' : isDark ? 'bg-white/5 hover:bg-white/10' : 'bg-black/5 hover:bg-black/10'}`}>
+                  {em}
+                </button>
+              ))}
+              <input type="text" maxLength="2" title="Pressione Win + . para emojis" placeholder="+"
+                value={emojis.includes(form.emoji) ? '' : form.emoji}
+                onChange={(e) => setForm({ ...form, emoji: e.target.value })}
+                className={`w-10 h-10 rounded-xl text-lg text-center outline-none transition-all ${!emojis.includes(form.emoji) && form.emoji ? 'bg-blue-500/20 ring-2 ring-blue-500/50 text-blue-400' : isDark ? 'bg-white/5 hover:bg-white/10 text-slate-300 placeholder-slate-500' : 'bg-black/5 hover:bg-black/10 text-slate-700 placeholder-slate-400'}`}
+              />
+            </div>
             ) : (
               <div>
                 {form.deckImage ? (

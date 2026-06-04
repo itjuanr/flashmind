@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Sparkles, Eye, EyeOff, Loader2, ArrowLeft, ChevronRight, ChevronLeft, Check } from 'lucide-react';
+import api from '../services/api';
 
 const STUDY_GOALS = [
   { value: 'concurso',     label: '🏛️ Concurso público'    },
@@ -51,7 +52,7 @@ function OptionGrid({ options, value, onChange }) {
 }
 
 export default function Register() {
-  const { register } = useAuth();
+  const { login }    = useAuth();
   const navigate     = useNavigate();
 
   const [step, setStep]     = useState(1);
@@ -70,7 +71,12 @@ export default function Register() {
     if (!name.trim())                    return 'Informe seu nome.';
     if (!email.trim())                   return 'Informe seu e-mail.';
     if (!/\S+@\S+\.\S+/.test(email))    return 'E-mail inválido.';
-    if (password.length < 6)            return 'A senha precisa ter ao menos 6 caracteres.';
+    
+    const passRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
+    if (!passRegex.test(password)) {
+      return 'Senha fraca. Utilize pelo menos 8 caracteres misturando maiúsculas, minúsculas, números e símbolos.';
+    }
+    
     return '';
   };
 
@@ -88,7 +94,9 @@ export default function Register() {
   const handleSubmit = async () => {
     setError(''); setLoading(true);
     try {
-      await register(name, email, password, { studyGoal, studyArea, howFound });
+      // Registra o usuário e inicializa a sessão via AuthContext imediatamente
+      const res = await api.post('/auth/register', { name, email, password, studyGoal, studyArea, howFound });
+      login(res.data.user, res.data.token);
       navigate('/dashboard');
     } catch (e) {
       setError(e.response?.data?.message || 'Erro ao criar conta.');
@@ -98,14 +106,26 @@ export default function Register() {
   const inp = `w-full bg-white/4 border border-white/8 hover:border-white/12 focus:border-blue-500/50 px-4 py-3 rounded-xl outline-none transition-all text-white placeholder-slate-600 text-sm`;
 
   const strengthColor = ['bg-red-500', 'bg-orange-400', 'bg-yellow-400', 'bg-emerald-400'];
-  const strengthLevel = password.length === 0 ? -1 : password.length < 6 ? 0 : password.length < 8 ? 1 : password.length < 12 ? 2 : 3;
+  
+  // Algoritmo dinâmico para a força da senha baseado em critérios reais
+  const calculateStrength = (pwd) => {
+    if (!pwd) return -1;
+    let score = 0;
+    if (pwd.length >= 8) score++;
+    if (/[A-Z]/.test(pwd) && /[a-z]/.test(pwd)) score++;
+    if (/\d/.test(pwd)) score++;
+    if (/[^A-Za-z0-9]/.test(pwd)) score++;
+    return score - 1; // Mapeia de 1~4 para índices de array (0~3)
+  };
+  const strengthLevel = calculateStrength(password);
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden"
       style={{ backgroundColor: 'var(--bg)' }}>
       <div className="fixed top-0 left-1/3 w-[500px] h-[500px] bg-blue-600/8 blur-[140px] rounded-full pointer-events-none" />
 
-      <div className="w-full max-w-md relative z-10">
+      {/* Alargando o Form (de max-w-md para max-w-[520px]) para os botões do Step 2 encaixarem perfeitamente */}
+      <div className="w-full max-w-[520px] relative z-10">
         <Link to="/" className="inline-flex items-center gap-1.5 text-slate-500 hover:text-slate-300 text-sm mb-8 transition-colors group">
           <ArrowLeft size={15} className="group-hover:-translate-x-0.5 transition-transform" />
           Voltar para o início
@@ -144,7 +164,7 @@ export default function Register() {
                   <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">Senha</label>
                   <div className="relative">
                     <input type={showPw ? 'text' : 'password'} value={password}
-                      onChange={e => setPassword(e.target.value)} placeholder="Mín. 6 caracteres"
+                      onChange={e => setPassword(e.target.value)} placeholder="Maiúsculas, números e símbolos"
                       className={`${inp} pr-11`} onKeyDown={e => e.key === 'Enter' && handleNext()} />
                     <button type="button" onClick={() => setShowPw(v => !v)}
                       className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors">

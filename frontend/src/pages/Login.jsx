@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { LogIn, ArrowLeft, Eye, EyeOff, Sparkles, CheckCircle2 } from 'lucide-react';
+import api from '../services/api';
 
 function RedirectScreen({ name }) {
   return (
@@ -44,10 +45,17 @@ export default function Login() {
     setErrors({});
     setLoading(true);
     try {
-      const res = await login(email, password);
-      setUserName(res?.user?.name || '');
+      const res = await api.post('/auth/login', { email, password });
+      
+      localStorage.setItem('token', res.data.token);
+      
+      setUserName(res.data.user.name || '');
       setRedirecting(true);
-      setTimeout(() => navigate('/dashboard'), 1800);
+      
+      setTimeout(() => {
+        login(res.data.user, res.data.token);
+        navigate('/dashboard');
+      }, 1800);
     } catch (err) {
       const msg   = err.response?.data?.message || 'E-mail ou senha incorretos.';
       const field = err.response?.data?.field;
