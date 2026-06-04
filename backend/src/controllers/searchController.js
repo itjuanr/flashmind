@@ -9,13 +9,14 @@ exports.search = async (req, res) => {
     if (!q || q.length < 2) return res.json({ decks: [], cards: [] });
 
     const regex = new RegExp(q, 'i');
-    const userId = req.user.id;
+    const userId = req.user?.id || req.user?._id;
 
     const [decks, cards] = await Promise.all([
-      Deck.find({ userId, $or: [{ name: regex }, { description: regex }] }).limit(6),
+      Deck.find({ userId, $or: [{ name: regex }, { description: regex }] }).limit(6).lean(),
       Flashcard.find({ userId, $or: [{ front: regex }, { back: regex }] })
         .populate('deckId', 'name emoji color')
-        .limit(10),
+        .limit(10)
+        .lean(),
     ]);
 
     res.json({ decks, cards });
