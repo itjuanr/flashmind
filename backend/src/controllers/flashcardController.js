@@ -1,4 +1,5 @@
 const Flashcard = require('../models/Flashcard');
+const Deck = require('../models/Deck'); // Mover require para o topo
 
 exports.createFlashcard = async (req, res) => {
   try {
@@ -8,8 +9,7 @@ exports.createFlashcard = async (req, res) => {
     const backOk  = back?.trim()  || backImage  || backAudio;
     if (!frontOk || !backOk)
       return res.status(400).json({ message: 'Cada lado precisa ter texto, imagem ou áudio.' });
-    const Deck = require('../models/Deck');
-    const deck = await Deck.findById(deckId).select('reviewSettings');
+    const deck = await Deck.findById(deckId).select('reviewSettings').lean(); // Adicionar .lean() para performance
     const delayDays = deck?.reviewSettings?.newCardDelay ?? 1;
     const count = await Flashcard.countDocuments({ deckId });
     const card = await Flashcard.create({

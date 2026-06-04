@@ -27,17 +27,28 @@ exports.createDeck = async (req, res) => {
 exports.getDecks = async (req, res) => {
   try {
     const userId = req.user?.id || req.user?._id;
-    const decks = await Deck.find({ userId }).sort({ createdAt: -1 }).lean();
     const now = new Date();
-    const decksWithCount = await Promise.all(decks.map(async (deck) => {
-      const [count, masteredCount, dueCount] = await Promise.all([
-        Flashcard.countDocuments({ deckId: deck._id }),
-        Flashcard.countDocuments({ deckId: deck._id, nextReview: { $gt: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000) } }),
-        Flashcard.countDocuments({ deckId: deck._id, nextReview: { $lte: now } }),
-      ]);
-      return { ...deck, flashcardCount: count, masteredCount, dueCount };
-    }));
-    res.json(decksWithCount);
+    const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+    // Busca os decks e, em paralelo, agrega as contagens dos flashcards
+    const [decks, counts] = await Promise.all([
+      Deck.find({ userId }).sort({ createdAt: -1 }).lean(),
+      Flashcard.aggregate([
+        { $match: { userId: require('mongoose').Types.ObjectId(String(userId)) } },
+        {
+          $group: {
+            _id: '$deckId',
+            flashcardCount: { $sum: 1 },
+            dueCount: { $sum: { $cond: [{ $lte: ['$nextReview', now] }, 1, 0] } },
+            masteredCount: { $sum: { $cond: [{ $gt: ['$nextReview', sevenDaysFromNow] }, 1, 0] } }
+          }
+        }
+      ])
+    ]);
+
+    const countsMap = new Map(counts.map(c => [c._id.toString(), c]));
+    const result = decks.map(deck => ({ ...deck, ...(countsMap.get(deck._id.toString()) || { flashcardCount: 0, dueCount: 0, masteredCount: 0 }) }));
+    res.json(result);
   } catch (error) {
     res.status(500).json({ message: 'Erro ao buscar decks.' });
   }

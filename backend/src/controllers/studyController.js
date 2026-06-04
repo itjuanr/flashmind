@@ -1,5 +1,7 @@
 const StudySession = require('../models/StudySession');
 const Flashcard = require('../models/Flashcard');
+const mongoose = require('mongoose');
+
 
 // @desc    Salvar sessão ao finalizar modo estudo
 // @route   POST /api/study/session
@@ -193,7 +195,6 @@ exports.getHistory = async (req, res) => {
 
 // PATCH getStats — versão enriquecida com dueTotal para badge da Navbar
 // (sobrescreve o export existente via alias — o original fica como fallback)
-const Flashcard_patch = require('../models/Flashcard');
 const origGetStats = exports.getStats;
 exports.getStats = async (req, res) => {
   try {
@@ -203,11 +204,11 @@ exports.getStats = async (req, res) => {
     const now = new Date();
 
     const [todaySessions, allSessions, dueTotal, cardsStudiedToday] = await Promise.all([
-      require('../models/StudySession').find({ userId, createdAt: { $gte: startOfDay, $lte: endOfDay } }),
-      require('../models/StudySession').find({ userId }),
-      Flashcard_patch.countDocuments({ userId, nextReview: { $lte: now } }),
-      require('../models/StudySession').aggregate([
-        { $match: { userId: require('mongoose').Types.ObjectId.createFromHexString(userId.toString()), createdAt: { $gte: startOfDay, $lte: endOfDay } } },
+      StudySession.find({ userId, createdAt: { $gte: startOfDay, $lte: endOfDay } }).lean(),
+      StudySession.find({ userId }).lean(),
+      Flashcard.countDocuments({ userId, nextReview: { $lte: now } }),
+      StudySession.aggregate([
+        { $match: { userId: new mongoose.Types.ObjectId(String(userId)), createdAt: { $gte: startOfDay, $lte: endOfDay } } },
         { $group: { _id: null, total: { $sum: '$totalCards' } } },
       ]),
     ]);
