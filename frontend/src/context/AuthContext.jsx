@@ -10,7 +10,7 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const loadUser = async () => {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('token') || localStorage.getItem('fm_token');
       
       if (!token) {
         setLoading(false);
@@ -26,6 +26,7 @@ export const AuthProvider = ({ children }) => {
       } catch (error) {
         console.error('Sessão expirada ou inválida:', error);
         localStorage.removeItem('token');
+        localStorage.removeItem('fm_token'); // Limpa sujeira antiga
         delete api.defaults.headers.common['Authorization'];
         setUser(null);
       } finally {
@@ -40,12 +41,14 @@ export const AuthProvider = ({ children }) => {
 
   const login = (userData, token) => {
     localStorage.setItem('token', token); // Mantém o usuário logado ao sair do site
+    localStorage.removeItem('fm_token'); // Destrói o token antigo que causava o bug
     api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     setUser(userData);
   };
 
   const logout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('fm_token');
     delete api.defaults.headers.common['Authorization'];
     setUser(null);
   };

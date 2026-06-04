@@ -3,6 +3,7 @@ import { AuthProvider }  from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
 import { ThemeProvider } from './context/ThemeContext';
 import PrivateRoute      from './components/PrivateRoute';
+import PublicRoute       from './components/PublicRoute';
 
 import Home               from './pages/Home';
 import Login              from './pages/Login';
@@ -30,9 +31,9 @@ export default function App() {
           <ToastProvider>
             <Routes>
               {/* ── Públicas ── */}
-              <Route path="/"                          element={<Home />} />
-              <Route path="/login"                     element={<Login />} />
-              <Route path="/register"                  element={<Register />} />
+                <Route path="/"                          element={<PublicRoute><Home /></PublicRoute>} />
+                <Route path="/login"                     element={<PublicRoute><Login /></PublicRoute>} />
+                <Route path="/register"                  element={<PublicRoute><Register /></PublicRoute>} />
               <Route path="/forgot-password"           element={<ForgotPasswordPage />} />
               <Route path="/reset-password/:token"     element={<ResetPasswordPage />} />
               <Route path="/verify-email/:token"       element={<VerifyEmailPage />} />

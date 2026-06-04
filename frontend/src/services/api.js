@@ -11,7 +11,8 @@ const api = axios.create({
 
 // Injeta o token JWT em toda requisição automaticamente
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('fm_token') || localStorage.getItem('token');
+  // Prioriza o 'token' novo. Se houver 'fm_token' antigo, usa como fallback
+  const token = localStorage.getItem('token') || localStorage.getItem('fm_token');
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
@@ -22,6 +23,7 @@ api.interceptors.response.use(
   (err) => {
     if (err.response?.status === 401) {
       localStorage.removeItem('token');
+      localStorage.removeItem('fm_token');
       window.location.href = '/login';
     }
     return Promise.reject(err);
