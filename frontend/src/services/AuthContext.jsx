@@ -5,7 +5,7 @@ const AuthContext = createContext(null);
 
 const SESSION_KEY = 'fm_token';
 const EXPIRY_KEY  = 'fm_token_expiry';
-const SESSION_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 dias
+const SESSION_DURATION = 30 * 60 * 1000; // 30 minutos
 
 function saveSession(token) {
   localStorage.setItem(SESSION_KEY, token);
@@ -40,7 +40,7 @@ function touchSession() {
   const token = localStorage.getItem(SESSION_KEY);
   if (!token) return;
   const expiry = parseInt(localStorage.getItem(EXPIRY_KEY) || '0', 10);
-  if (!expiry || (expiry - Date.now()) < 6 * 24 * 60 * 60 * 1000) {
+  if (!expiry || (expiry - Date.now()) < 25 * 60 * 1000) {
     localStorage.setItem(EXPIRY_KEY, (Date.now() + SESSION_DURATION).toString());
   }
 }

@@ -5,7 +5,7 @@ const User   = require('../models/User');
 const { sendConfirmationEmail, sendPasswordResetEmail } = require('../config/email');
 
 const signToken = (id) => jwt.sign({ id: id.toString() }, process.env.JWT_SECRET, {
-  expiresIn: process.env.JWT_EXPIRES_IN || '7d',
+  expiresIn: process.env.JWT_EXPIRES_IN || '30m',
 });
 
 const userPayload = (user) => ({
