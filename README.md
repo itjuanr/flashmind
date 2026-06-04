@@ -1,4 +1,4 @@
-# ⚡ FlashMind
+# <img src="https://i.imgur.com/jXDsNEh.png" width="48" align="center" alt="FlashMind Logo"/> FlashMind
 
 ![React](https://img.shields.io/badge/React-18-61DAFB?style=flat&logo=react&logoColor=white)
 ![Node.js](https://img.shields.io/badge/Node.js-Express-339933?style=flat&logo=node.js&logoColor=white)

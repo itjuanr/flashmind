@@ -22,8 +22,9 @@ function emailBase(content) {
       <table width="520" cellpadding="0" cellspacing="0" style="background:#0F0F18;border:1px solid rgba(255,255,255,0.08);border-radius:20px;overflow:hidden;">
         <tr>
           <td style="padding:28px 36px;border-bottom:1px solid rgba(255,255,255,0.06);">
-            <span style="font-size:18px;font-weight:900;color:#ffffff;letter-spacing:-0.5px;">
-              ⚡ Flash<span style="color:#60a5fa;">Mind</span>
+            <img src="https://i.imgur.com/jXDsNEh.png" alt="FlashMind Logo" width="48" style="vertical-align:middle;margin-right:8px;" />
+            <span style="font-size:18px;font-weight:900;color:#ffffff;letter-spacing:-0.5px;vertical-align:middle;">
+              Flash<span style="color:#60a5fa;">Mind</span>
             </span>
           </td>
         </tr>

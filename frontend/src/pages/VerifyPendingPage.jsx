@@ -50,8 +50,8 @@ export default function VerifyPendingPage() {
         <div className="glass rounded-3xl border border-white/8 p-10 text-center">
 
           {/* Logo */}
-          <div className="flex items-center justify-center gap-2 mb-10">
-            <Sparkles size={18} className="text-blue-400" />
+          <div className="flex items-center justify-center gap-2 mb-8">
+            <img src="https://i.imgur.com/jXDsNEh.png" alt="FlashMind Logo" className="w-12 h-12 object-contain" />
             <span className="font-bold text-white tracking-tight">
               Flash<span className="text-blue-400">Mind</span>
             </span>

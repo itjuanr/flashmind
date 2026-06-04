@@ -16,7 +16,7 @@ export default function Home() {
       {/* Header */}
       <header className="flex justify-between items-center px-8 py-6 max-w-6xl mx-auto">
         <div className="flex items-center gap-2">
-          <Layers size={18} className="text-blue-400" />
+          <img src="https://i.imgur.com/jXDsNEh.png" alt="FlashMind Logo" className="w-12 h-12 object-contain" />
           <span className={`font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-800'}`}>
             Flash<span className="text-blue-400">Mind</span>
           </span>

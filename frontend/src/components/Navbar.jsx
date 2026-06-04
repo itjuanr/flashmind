@@ -74,9 +74,7 @@ export default function Navbar() {
 
         {/* Logo */}
         <Link to="/dashboard" className="flex items-center gap-2 group flex-shrink-0">
-          <div className="p-1.5 rounded-lg bg-blue-500/15 text-blue-400 group-hover:bg-blue-500/25 transition-colors">
-            <Sparkles size={18} />
-          </div>
+          <img src="https://i.imgur.com/jXDsNEh.png" alt="FlashMind Logo" className="w-12 h-12 object-contain" />
           <span className={`font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-800'}`}>
             Flash<span className="text-blue-400">Mind</span>
           </span>
