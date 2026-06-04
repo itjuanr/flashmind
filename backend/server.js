@@ -134,20 +134,9 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Servidor rodando na porta ${PORT}`);
 
-  // Verifica conexão com Gmail ao iniciar
-  if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-    const nodemailer = require('nodemailer');
-    const t = nodemailer.createTransport({
-      service: 'gmail',
-      auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
-    });
-    t.verify().then(() => {
-      console.log('✅ Gmail conectado — e-mails funcionando');
-    }).catch(e => {
-      console.error('❌ Gmail FALHOU:', e.message);
-      console.error('   Verifique EMAIL_USER e EMAIL_PASS nas variáveis de ambiente');
-    });
+  if (process.env.RESEND_API_KEY) {
+    console.log('✅ Resend configurado — e-mails funcionando');
   } else {
-    console.warn('⚠ EMAIL_USER ou EMAIL_PASS não configurados — e-mails desativados');
+    console.warn('⚠ RESEND_API_KEY não configurada — e-mails desativados');
   }
 });
