@@ -7,8 +7,8 @@ import { useToast } from '../context/ToastContext';
 import { useTheme } from '../context/ThemeContext';
 import {
   Plus, ArrowLeft, Loader2, X, BookOpen, Image, Link, Upload,
-  Trash2 as TrashIcon, Download, FileUp, Search, History,
-  CheckCircle2, XCircle, Clock, LayoutGrid, MoreVertical, Copy,
+  Trash2 as TrashIcon, Download, FileUp, Search, History, FileArchive,
+  CheckCircle2, XCircle, Clock, LayoutGrid, MoreVertical, Copy, FileText,
 } from 'lucide-react';
 import CsvImportModal from '../components/CsvImportModal';
 import AudioPicker from '../components/AudioPicker';
@@ -308,6 +308,7 @@ export default function DeckPage() {
   const [showShareModal, setShowShareModal] = useState(false);
   const [showDeckMenu, setShowDeckMenu] = useState(false);
   const [confirmDeleteDeck, setConfirmDeleteDeck] = useState(false);
+  const [exportProgress, setExportProgress] = useState(null);
   const deckMenuRef = useRef();
 
   // Ordenação de cards
@@ -488,6 +489,139 @@ export default function DeckPage() {
     toast(`${cards.length} cards exportados!`, 'success');
   };
 
+  const exportPdf = async () => {
+    if (cards.length === 0) { toast('Nenhum card para exportar.', 'error'); return; }
+    toast('Gerando PDF...', 'info');
+    try {
+      // Importação dinâmica para não pesar o bundle inicial do site
+      const jsPDFModule = await import('jspdf');
+      const autoTableModule = await import('jspdf-autotable');
+      const jsPDF = jsPDFModule.default || jsPDFModule.jsPDF || jsPDFModule;
+      const autoTable = autoTableModule.default || autoTableModule;
+
+      const doc = new jsPDF();
+      const deckName = deck?.name || 'FlashMind Deck';
+
+      // Título
+      doc.setFontSize(16);
+      doc.text(deckName, 14, 20);
+
+      // Subtítulo
+      doc.setFontSize(10);
+      doc.setTextColor(100);
+      doc.text(`${cards.length} cards exportados`, 14, 28);
+
+      // Dados da tabela
+      const tableData = cards.map(c => [
+        c.front || '',
+        c.back || '',
+        c.notes || ''
+      ]);
+
+      // Gerar a tabela
+      autoTable(doc, {
+        startY: 34,
+        head: [['Frente', 'Verso', 'Anotações']],
+        body: tableData,
+        headStyles: { fillColor: [37, 99, 235] }, // Azul do FlashMind
+        styles: { fontSize: 10, cellPadding: 4, overflow: 'linebreak' },
+        columnStyles: {
+          0: { cellWidth: 70 },
+          1: { cellWidth: 70 },
+          2: { cellWidth: 'auto' }
+        },
+      });
+
+      doc.save(`${deckName}.pdf`);
+      toast(`PDF baixado com sucesso!`, 'success');
+    } catch (error) {
+      console.error(error);
+      toast('Erro ao exportar PDF. Verifique se instalou jspdf e jspdf-autotable.', 'error');
+    }
+  };
+
+  const exportZip = async () => {
+    if (cards.length === 0) { toast('Nenhum card para exportar.', 'error'); return; }
+    setExportProgress({ message: 'Carregando pacotes necessários...', progress: 0 });
+    try {
+      const JSZip = (await import('jszip')).default;
+      const zip = new JSZip();
+      const mediaFolder = zip.folder('media');
+      const exportCards = [];
+
+      const processMedia = (dataUrl, prefix, fallbackExt) => {
+        if (!dataUrl || !dataUrl.startsWith('data:')) return dataUrl; // Se for URL externa, mantém a URL
+        const parts = dataUrl.split(',');
+        const base64Data = parts[1];
+        const mime = parts[0].split(':')[1].split(';')[0];
+        const ext = mime.split('/')[1] || fallbackExt;
+        const filename = `${prefix}.${ext}`;
+        mediaFolder.file(filename, base64Data, { base64: true });
+        return `media/${filename}`; // Retorna caminho relativo para o Excel
+      };
+
+      for (let i = 0; i < cards.length; i++) {
+        setExportProgress({ message: `Processando mídias: card ${i + 1} de ${cards.length}...`, progress: Math.round((i / cards.length) * 50) });
+        if (i % 5 === 0) await new Promise(r => setTimeout(r, 0)); // Evita travamento da UI
+
+        const c = cards[i];
+        const exportCard = {
+          frente: c.front || '', verso: c.back || '', notas: c.notes || '',
+          nivel: c.level || 1, favorito: c.isFavorite ? 'sim' : 'nao', cor: c.cardColor || ''
+        };
+        exportCard.img_frente = processMedia(c.frontImage, `card_${i}_frente_img`, 'png');
+        exportCard.img_verso  = processMedia(c.backImage,  `card_${i}_verso_img`,  'png');
+        exportCard.aud_frente = processMedia(c.frontAudio, `card_${i}_frente_aud`, 'webm');
+        exportCard.aud_verso  = processMedia(c.backAudio,  `card_${i}_verso_aud`,  'webm');
+        exportCards.push(exportCard);
+      }
+
+      // Adiciona o Excel (.xlsx) atualizado apontando para as mídias dentro do ZIP
+      setExportProgress({ message: 'Gerando planilha Excel...', progress: 60 });
+      if (!window.XLSX) {
+        await new Promise((res) => {
+          const s = document.createElement('script');
+          s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+          s.onload = res; document.head.appendChild(s);
+        });
+      }
+      const XLSX = window.XLSX;
+      const data = [
+        ["frente", "verso", "notas", "nivel", "favorito", "cor", "img_frente", "img_verso", "audio_frente", "audio_verso"],
+        ...exportCards.map((c) => [
+          c.frente, c.verso, c.notas, c.nivel, c.favorito, c.cor,
+          c.img_frente || '', c.img_verso || '', c.aud_frente || '', c.aud_verso || ''
+        ]),
+      ];
+      const ws = XLSX.utils.aoa_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Flashcards");
+      const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+      zip.file(`${deck?.name || 'FlashMind_Deck'}.xlsx`, excelBuffer);
+
+      // Opcional: Adiciona um arquivo JSON para facilitar a reimportação por outros sistemas
+      zip.file('deck_data.json', JSON.stringify({ deck, cards: exportCards }, null, 2));
+
+      setExportProgress({ message: 'Compactando arquivo .zip (Isso pode demorar um pouco)...', progress: 80 });
+      const content = await zip.generateAsync({ type: 'blob' }, (metadata) => {
+        setExportProgress({ message: 'Compactando arquivo .zip (Isso pode demorar um pouco)...', progress: 80 + Math.round(metadata.percent * 0.2) });
+      });
+
+      const url = URL.createObjectURL(content);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${deck?.name || 'Backup'}.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setExportProgress(null);
+      toast('Backup baixado com sucesso!', 'success');
+    } catch (error) {
+      console.error(error);
+      setExportProgress(null);
+      toast('Erro ao exportar. Verifique se o pacote jszip está instalado.', 'error');
+    }
+  };
+
   const handleImported = () => {
     api.get(`/flashcards/deck/${deckId}`).then((r) => setCards(r.data)).catch(() => {});
   };
@@ -574,6 +708,21 @@ export default function DeckPage() {
         </div>
       )}
 
+      {/* Modal de Progresso da Exportação */}
+      {exportProgress && (
+        <div className="fixed inset-0 bg-black/75 z-[100] flex items-center justify-center p-4">
+          <div className={`w-full max-w-sm rounded-3xl border shadow-2xl p-8 text-center ${isDark ? 'bg-[#0F0F18] border-white/10' : 'bg-white border-black/8'}`}>
+            <Loader2 size={32} className="animate-spin text-blue-400 mx-auto mb-4" />
+            <h3 className={`font-bold text-lg mb-2 ${isDark ? 'text-white' : 'text-slate-800'}`}>Gerando Backup</h3>
+            <p className="text-slate-500 text-sm mb-6">{exportProgress.message}</p>
+            <div className={`w-full h-2 rounded-full overflow-hidden ${isDark ? 'bg-white/10' : 'bg-black/10'}`}>
+              <div className="h-full bg-blue-500 transition-all duration-300" style={{ width: `${exportProgress.progress}%` }} />
+            </div>
+            <p className="text-slate-500 text-xs mt-3">{exportProgress.progress}%</p>
+          </div>
+        </div>
+      )}
+
       <main className="max-w-6xl mx-auto px-6 pt-28 pb-16 relative z-10">
         <button onClick={() => navigate('/dashboard')}
           className="flex items-center gap-1.5 text-slate-500 hover:text-white text-sm mb-8 transition-colors group">
@@ -609,12 +758,18 @@ export default function DeckPage() {
                       {/* Overlay para fechar ao clicar fora — mobile */}
                       <div className="fixed inset-0 z-20" onClick={() => setShowDeckMenu(false)} />
                       <div className={`absolute left-0 sm:left-auto sm:right-0 top-full mt-2 w-52 rounded-2xl border shadow-2xl z-30 overflow-hidden ${isDark ? 'bg-[#0F0F18] border-white/10' : 'bg-white border-black/8'}`}>
-                      {cards.length > 0 && (
                         <button onClick={() => { exportXlsx(); setShowDeckMenu(false); }}
-                          className={`w-full flex items-center gap-2.5 px-4 py-3 text-sm transition-all ${isDark ? 'text-slate-300 hover:bg-white/8' : 'text-slate-700 hover:bg-black/4'}`}>
-                          <Download size={14} className="text-slate-500" /> Exportar Excel (.xlsx)
+                          className={`w-full flex items-center gap-2.5 px-4 py-3 text-sm transition-all ${isDark ? 'text-slate-300 hover:bg-white/8' : 'text-slate-700 hover:bg-black/4'} ${cards.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                          <Download size={14} className="text-slate-500" /> Exportar Excel (Apenas texto)
                         </button>
-                      )}
+                        <button onClick={() => { exportPdf(); setShowDeckMenu(false); }}
+                          className={`w-full flex items-center gap-2.5 px-4 py-3 text-sm transition-all ${isDark ? 'text-slate-300 hover:bg-white/8' : 'text-slate-700 hover:bg-black/4'} ${cards.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                          <FileText size={14} className="text-slate-500" /> Exportar PDF (.pdf)
+                        </button>
+                        <button onClick={() => { exportZip(); setShowDeckMenu(false); }}
+                          className={`w-full flex items-center gap-2.5 px-4 py-3 text-sm transition-all ${isDark ? 'text-slate-300 hover:bg-white/8' : 'text-slate-700 hover:bg-black/4'} ${cards.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                          <FileArchive size={14} className="text-slate-500" /> Exportar Backup (.zip)
+                        </button>
                       <button onClick={() => { setShowImport(true); setShowDeckMenu(false); }}
                         className={`w-full flex items-center gap-2.5 px-4 py-3 text-sm transition-all ${isDark ? 'text-slate-300 hover:bg-white/8' : 'text-slate-700 hover:bg-black/4'}`}>
                         <FileUp size={14} className="text-slate-500" /> Importar flashcards
