@@ -9,7 +9,7 @@ const signToken = (id) => jwt.sign({ id }, process.env.JWT_SECRET, {
 });
 
 const userPayload = (user) => ({
-  id: user._id, name: user.name, email: user.email,
+  id: user._id.toString(), name: user.name, email: user.email,
   dailyGoal: user.dailyGoal, isVerified: user.isVerified,
   studyGoal: user.studyGoal, studyArea: user.studyArea,
 });

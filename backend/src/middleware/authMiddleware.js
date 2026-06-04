@@ -24,11 +24,13 @@ exports.protect = async (req, res, next) => {
       return res.status(401).json({ message: 'Sessão expirada. Faça login novamente.' });
     }
 
+    // Padronizamos o req.user para ter as informações essenciais disponíveis em todas as rotas.
     req.user = {
       id: user._id.toString(),
       _id: user._id,
       name: user.name,
-      email: user.email
+      email: user.email,
+      isVerified: user.isVerified, // Adicionamos o status de verificação
     };
 
     next();

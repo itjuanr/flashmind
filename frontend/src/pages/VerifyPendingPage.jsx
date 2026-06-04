@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Sparkles, Mail, Loader2, Check, LogOut, RefreshCw } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 
 export default function VerifyPendingPage() {
@@ -28,19 +28,24 @@ export default function VerifyPendingPage() {
     setChecking(true); setError('');
     try {
       const res = await api.get('/auth/me');
+      // Se o backend confirmar que o usuário está verificado...
       if (res.data.isVerified) {
-        // Recarrega a página para atualizar o AuthContext
-        window.location.href = '/dashboard';
+        // ...atualizamos o estado local no AuthContext.
+        // O componente PrivateRoute/PublicRoute detectará a mudança e fará o redirecionamento.
+        // Isso é mais limpo e rápido que um hard-reload (window.location.href).
+        updateUser(res.data);
       } else {
+        // Se ainda não estiver verificado, apenas mostramos um feedback.
         setChecked(true);
         setTimeout(() => setChecked(false), 3000);
       }
-    } catch {
-      setError('Erro ao verificar. Tente novamente.');
+    } catch (e) {
+      setError(e.response?.data?.message || 'Erro ao verificar. Tente novamente.');
     } finally { setChecking(false); }
   };
 
   const handleLogout = () => { logout(); navigate('/login'); };
+  const { updateUser } = useAuth();
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden"
