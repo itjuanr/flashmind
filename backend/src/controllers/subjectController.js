@@ -4,7 +4,7 @@ const Note    = require('../models/Note');
 // GET /api/notebook/subjects
 exports.getSubjects = async (req, res) => {
   try {
-    const subjects = await Subject.find({ userId: req.user.id }).sort({ semester: 1, name: 1 });
+    const subjects = await Subject.find({ userId: req.user._id }).sort({ semester: 1, name: 1 });
     // Conta notas por matéria
     const counts = await Note.aggregate([
       { $match: { userId: req.user._id } },
@@ -24,7 +24,7 @@ exports.getSubjects = async (req, res) => {
 exports.createSubject = async (req, res) => {
   try {
     const { name, semester, color, emoji, description } = req.body;
-    const subject = await Subject.create({ userId: req.user.id, name, semester, color, emoji, description });
+    const subject = await Subject.create({ userId: req.user._id, name, semester, color, emoji, description });
     res.status(201).json(subject);
   } catch (e) { res.status(400).json({ message: e.message }); }
 };
@@ -33,7 +33,7 @@ exports.createSubject = async (req, res) => {
 exports.updateSubject = async (req, res) => {
   try {
     const subject = await Subject.findOneAndUpdate(
-      { _id: req.params.id, userId: req.user.id },
+      { _id: req.params.id, userId: req.user._id },
       req.body,
       { new: true, runValidators: true }
     );
@@ -45,7 +45,7 @@ exports.updateSubject = async (req, res) => {
 // DELETE /api/notebook/subjects/:id
 exports.deleteSubject = async (req, res) => {
   try {
-    const subject = await Subject.findOneAndDelete({ _id: req.params.id, userId: req.user.id });
+    const subject = await Subject.findOneAndDelete({ _id: req.params.id, userId: req.user._id });
     if (!subject) return res.status(404).json({ message: 'Matéria não encontrada.' });
     // Apaga todas as notas da matéria
     await Note.deleteMany({ subjectId: req.params.id });

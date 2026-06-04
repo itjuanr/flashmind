@@ -13,7 +13,7 @@ router.get('/due-decks', async (req, res) => {
     const Deck      = require('../models/Deck');
     const mongoose  = require('mongoose');
     const now    = new Date();
-    const userId = new mongoose.Types.ObjectId(req.user.id);
+    const userId = new mongoose.Types.ObjectId(req.user._id);
     const dueCounts = await Flashcard.aggregate([
       { $match: { userId, nextReview: { $lte: now } } },
       { $group: { _id: '$deckId', count: { $sum: 1 } } },

@@ -9,7 +9,7 @@ exports.createDeck = async (req, res) => {
     const { name, description, color, emoji, deckImage, tags, reviewSettings } = req.body;
     if (!name?.trim()) return res.status(400).json({ message: 'O nome do deck é obrigatório.' });
     const deck = await Deck.create({
-      userId: req.user.id,
+      userId: req.user._id,
       name: name.trim(), description, color, emoji,
       deckImage: deckImage || null,
       tags: Array.isArray(tags) ? tags.map(t => t.trim().toLowerCase()).filter(Boolean) : [],
@@ -25,7 +25,7 @@ exports.createDeck = async (req, res) => {
 // @route   GET /api/decks
 exports.getDecks = async (req, res) => {
   try {
-    const decks = await Deck.find({ userId: req.user.id }).sort({ createdAt: -1 });
+    const decks = await Deck.find({ userId: req.user._id }).sort({ createdAt: -1 });
     const now = new Date();
     const decksWithCount = await Promise.all(decks.map(async (deck) => {
       const [count, masteredCount, dueCount] = await Promise.all([
@@ -46,7 +46,7 @@ exports.getDecks = async (req, res) => {
 exports.getDeck = async (req, res) => {
   try {
     const deck = await Deck.findById(req.params.id);
-    if (!deck || deck.userId.toString() !== req.user.id)
+    if (!deck || deck.userId.toString() !== req.user._id)
       return res.status(404).json({ message: 'Deck não encontrado.' });
     res.json(deck);
   } catch (error) {
@@ -59,7 +59,7 @@ exports.getDeck = async (req, res) => {
 exports.updateDeck = async (req, res) => {
   try {
     const deck = await Deck.findById(req.params.id);
-    if (!deck || deck.userId.toString() !== req.user.id)
+    if (!deck || deck.userId.toString() !== req.user._id)
       return res.status(404).json({ message: 'Deck não encontrado.' });
     const { name, description, color, emoji, deckImage, tags, reviewSettings } = req.body;
     if (name) deck.name = name.trim();
@@ -81,7 +81,7 @@ exports.updateDeck = async (req, res) => {
 exports.deleteDeck = async (req, res) => {
   try {
     const deck = await Deck.findById(req.params.id);
-    if (!deck || deck.userId.toString() !== req.user.id)
+    if (!deck || deck.userId.toString() !== req.user._id)
       return res.status(404).json({ message: 'Deck não encontrado.' });
     await Flashcard.deleteMany({ deckId: deck._id });
     await deck.deleteOne();
@@ -96,7 +96,7 @@ exports.deleteDeck = async (req, res) => {
 exports.toggleFavoriteDeck = async (req, res) => {
   try {
     const deck = await Deck.findById(req.params.id);
-    if (!deck || deck.userId.toString() !== req.user.id)
+    if (!deck || deck.userId.toString() !== req.user._id)
       return res.status(404).json({ message: 'Deck não encontrado.' });
     deck.isFavorite = !deck.isFavorite;
     await deck.save();
@@ -112,10 +112,10 @@ exports.cloneDeck = async (req, res) => {
   try {
     const mongoose = require('mongoose');
     const original = await Deck.findById(req.params.id);
-    if (!original || original.userId.toString() !== req.user.id)
+    if (!original || original.userId.toString() !== req.user._id)
       return res.status(404).json({ message: 'Deck não encontrado.' });
     const clone = await Deck.create({
-      userId: req.user.id,
+      userId: req.user._id,
       name: `${original.name} (cópia)`,
       description: original.description,
       color: original.color, emoji: original.emoji,
@@ -123,7 +123,7 @@ exports.cloneDeck = async (req, res) => {
     });
     const cards = await Flashcard.find({ deckId: original._id }).lean();
     if (cards.length > 0) {
-      const userObjId = new mongoose.Types.ObjectId(req.user.id);
+      const userObjId = new mongoose.Types.ObjectId(req.user._id);
       const mapped = cards.map((c) => ({
         userId: userObjId,
         deckId: clone._id,
@@ -150,7 +150,7 @@ exports.cloneDeck = async (req, res) => {
 exports.toggleShare = async (req, res) => {
   try {
     const deck = await Deck.findById(req.params.id);
-    if (!deck || deck.userId.toString() !== req.user.id)
+    if (!deck || deck.userId.toString() !== req.user._id)
       return res.status(404).json({ message: 'Deck não encontrado.' });
     if (deck.shareToken) {
       deck.shareToken = null; // revogar
@@ -184,13 +184,13 @@ exports.cloneSharedDeck = async (req, res) => {
     const original = await Deck.findOne({ shareToken: req.params.token });
     if (!original) return res.status(404).json({ message: 'Link inválido.' });
     const clone = await Deck.create({
-      userId: req.user.id,
+      userId: req.user._id,
       name: original.name, description: original.description,
       color: original.color, emoji: original.emoji, tags: original.tags,
     });
     const cards = await Flashcard.find({ deckId: original._id });
     if (cards.length > 0) await Flashcard.insertMany(cards.map((c) => ({
-      userId: req.user.id, deckId: clone._id,
+      userId: req.user._id, deckId: clone._id,
       front: c.front, back: c.back,
       frontImage: c.frontImage, backImage: c.backImage, notes: c.notes,
     })));

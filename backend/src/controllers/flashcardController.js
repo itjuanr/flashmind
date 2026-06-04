@@ -12,7 +12,7 @@ exports.createFlashcard = async (req, res) => {
     const delayDays = deck?.reviewSettings?.newCardDelay ?? 1;
     const count = await Flashcard.countDocuments({ deckId });
     const card = await Flashcard.create({
-      userId: req.user.id, deckId,
+      userId: req.user._id, deckId,
       front: front?.trim() || '', back: back?.trim() || '',
       frontImage: frontImage || null, backImage: backImage || null,
       frontAudio: frontAudio || null, backAudio: backAudio || null,
@@ -28,7 +28,7 @@ exports.createFlashcard = async (req, res) => {
 
 exports.getCardsByDeck = async (req, res) => {
   try {
-    const cards = await Flashcard.find({ deckId: req.params.deckId, userId: req.user.id }).sort({ position: 1, createdAt: -1 });
+    const cards = await Flashcard.find({ deckId: req.params.deckId, userId: req.user._id }).sort({ position: 1, createdAt: -1 });
     res.json(cards);
   } catch (error) {
     res.status(500).json({ message: 'Erro ao buscar cards.' });
@@ -37,7 +37,7 @@ exports.getCardsByDeck = async (req, res) => {
 
 exports.getCardsToStudy = async (req, res) => {
   try {
-    const cards = await Flashcard.find({ deckId: req.params.deckId, userId: req.user.id, nextReview: { $lte: new Date() } });
+    const cards = await Flashcard.find({ deckId: req.params.deckId, userId: req.user._id, nextReview: { $lte: new Date() } });
     res.json(cards);
   } catch (error) {
     res.status(500).json({ message: 'Erro ao buscar cards.' });
@@ -47,7 +47,7 @@ exports.getCardsToStudy = async (req, res) => {
 exports.updateFlashcard = async (req, res) => {
   try {
     const card = await Flashcard.findById(req.params.id);
-    if (!card || card.userId.toString() !== req.user.id)
+    if (!card || card.userId.toString() !== req.user._id)
       return res.status(404).json({ message: 'Card não encontrado.' });
     const { front, back, frontImage, backImage, notes, frontAudio, backAudio, cardColor } = req.body;
     if (front !== undefined) card.front = front.trim();
@@ -71,7 +71,7 @@ exports.reorderCards = async (req, res) => {
   try {
     const { order } = req.body; // array de { _id, position }
     await Promise.all(order.map(({ _id, position }) =>
-      Flashcard.updateOne({ _id, userId: req.user.id }, { position })
+      Flashcard.updateOne({ _id, userId: req.user._id }, { position })
     ));
     res.json({ ok: true });
   } catch (error) {
@@ -82,7 +82,7 @@ exports.reorderCards = async (req, res) => {
 exports.toggleFavorite = async (req, res) => {
   try {
     const card = await Flashcard.findById(req.params.id);
-    if (!card || card.userId.toString() !== req.user.id)
+    if (!card || card.userId.toString() !== req.user._id)
       return res.status(404).json({ message: 'Card não encontrado.' });
     card.isFavorite = !card.isFavorite;
     await card.save();
@@ -95,7 +95,7 @@ exports.toggleFavorite = async (req, res) => {
 exports.deleteFlashcard = async (req, res) => {
   try {
     const card = await Flashcard.findById(req.params.id);
-    if (!card || card.userId.toString() !== req.user.id)
+    if (!card || card.userId.toString() !== req.user._id)
       return res.status(404).json({ message: 'Card não encontrado.' });
     await card.deleteOne();
     res.json({ message: 'Card removido.' });
@@ -120,7 +120,7 @@ exports.reviewCard = async (req, res) => {
 
 exports.getFavoriteCards = async (req, res) => {
   try {
-    const favorites = await Flashcard.find({ userId: req.user.id, isFavorite: true })
+    const favorites = await Flashcard.find({ userId: req.user._id, isFavorite: true })
       .populate('deckId', 'name emoji color')
       .sort({ createdAt: -1 });
     res.json(favorites);
