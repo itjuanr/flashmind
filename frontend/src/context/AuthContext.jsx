@@ -1,116 +1,64 @@
-import { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import api from '../services/api';
 
-const AuthContext = createContext(null);
+const AuthContext = createContext({});
 
-const SESSION_KEY = 'fm_token';
-const EXPIRY_KEY  = 'fm_token_expiry';
-const SESSION_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 dias
-
-function saveSession(token) {
-  localStorage.setItem(SESSION_KEY, token);
-  localStorage.setItem(EXPIRY_KEY, (Date.now() + SESSION_DURATION).toString());
-}
-
-function clearSession() {
-  localStorage.removeItem(SESSION_KEY);
-  localStorage.removeItem(EXPIRY_KEY);
-  localStorage.removeItem('token'); // limpa chave legada também
-}
-
-function getValidToken() {
-  // Migração: se ainda tiver o token legado, migra para fm_token
-  const legacy = localStorage.getItem('token');
-  if (legacy) {
-    saveSession(legacy);
-    localStorage.removeItem('token');
-    return legacy;
-  }
-
-  const token  = localStorage.getItem(SESSION_KEY);
-  const expiry = parseInt(localStorage.getItem(EXPIRY_KEY) || '0', 10);
-  if (!token) return null;
-  // Se não tiver expiry (token antigo sem expiração), renova
-  if (!expiry) { saveSession(token); return token; }
-  if (Date.now() > expiry) { clearSession(); return null; }
-  return token;
-}
-
-function touchSession() {
-  const token = localStorage.getItem(SESSION_KEY);
-  if (!token) return;
-  const expiry = parseInt(localStorage.getItem(EXPIRY_KEY) || '0', 10);
-  if (!expiry || (expiry - Date.now()) < 6 * 24 * 60 * 60 * 1000) {
-    localStorage.setItem(EXPIRY_KEY, (Date.now() + SESSION_DURATION).toString());
-  }
-}
-
-export function AuthProvider({ children }) {
-  const [user, setUser]       = useState(null);
+export const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(null);
+  // O estado loading evita que a tela pisque o redirecionamento de login ao dar F5
   const [loading, setLoading] = useState(true);
-  const touchTimer = useRef(null);
 
   useEffect(() => {
-    const token = getValidToken();
-    if (!token) { setLoading(false); return; }
+    const loadUser = async () => {
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        setLoading(false);
+        return;
+      }
 
-    api.get('/auth/me')
-      .then((res) => { setUser(res.data); touchSession(); })
-      .catch(() => clearSession())
-      .finally(() => setLoading(false));
+      // Anexa o token para todas as futuras requisições automaticamente
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+      try {
+        const { data } = await userRequest(); // Valida se o token ainda é real no BD
+        setUser(data);
+      } catch (error) {
+        console.error('Sessão expirada ou inválida:', error);
+        localStorage.removeItem('token');
+        delete api.defaults.headers.common['Authorization'];
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadUser();
   }, []);
 
-  // Renova expiração ao interagir (throttle 60s)
-  useEffect(() => {
-    if (!user) return;
-    const handler = () => {
-      if (touchTimer.current) return;
-      touchTimer.current = setTimeout(() => {
-        touchSession();
-        touchTimer.current = null;
-      }, 60_000);
-    };
-    window.addEventListener('click', handler);
-    window.addEventListener('keydown', handler);
-    return () => {
-      window.removeEventListener('click', handler);
-      window.removeEventListener('keydown', handler);
-      clearTimeout(touchTimer.current);
-    };
-  }, [user]);
+  const userRequest = () => api.get('/auth/me');
 
-  // Verifica expiração a cada minuto
-  useEffect(() => {
-    const id = setInterval(() => {
-      if (user && !getValidToken()) setUser(null);
-    }, 60_000);
-    return () => clearInterval(id);
-  }, [user]);
-
-  const login = async (email, password) => {
-    const res = await api.post('/auth/login', { email, password });
-    saveSession(res.data.token);
-    setUser(res.data.user);
-    return res.data;
-  };
-
-  const register = async (name, email, password, extra = {}) => {
-    const res = await api.post('/auth/register', { name, email, password, ...extra });
-    saveSession(res.data.token);
-    setUser(res.data.user);
-    return res.data;
+  const login = (userData, token) => {
+    localStorage.setItem('token', token); // Mantém o usuário logado ao sair do site
+    api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    setUser(userData);
   };
 
   const logout = () => {
-    clearSession();
+    localStorage.removeItem('token');
+    delete api.defaults.headers.common['Authorization'];
     setUser(null);
   };
 
+  const updateUser = (data) => {
+    setUser((prev) => ({ ...prev, ...data }));
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, login, logout, updateUser, loading }}>
       {children}
     </AuthContext.Provider>
   );
-}
+};
 
 export const useAuth = () => useContext(AuthContext);

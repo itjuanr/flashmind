@@ -91,8 +91,7 @@ exports.login = async (req, res) => {
 // ── GET /api/auth/me ──────────────────────────────────────────────────────────
 exports.getMe = async (req, res) => {
   try {
-    const userId = req.user?.id || req.user?._id;
-    const user = await User.findById(userId).lean();
+    const user = await User.findById(req.user.id).lean();
     if (!user) return res.status(404).json({ message: 'Usuário não encontrado.' });
     res.json(userPayload(user));
   } catch (e) { res.status(500).json({ message: 'Erro ao buscar usuário.' }); }
@@ -101,8 +100,7 @@ exports.getMe = async (req, res) => {
 // ── PATCH /api/auth/me ────────────────────────────────────────────────────────
 exports.updateMe = async (req, res) => {
   try {
-    const userId = req.user?.id || req.user?._id;
-    const user = await User.findById(userId);
+    const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ message: 'Usuário não encontrado.' });
 
     const { dailyGoal, studyGoal, studyArea } = req.body;
@@ -209,10 +207,9 @@ exports.resetPassword = async (req, res) => {
 exports.resendVerification = async (req, res) => {
   try {
     // req.user vem do middleware protect — se chegou aqui, o token é válido
-    const userId = req.user?.id || req.user?._id;
-    if (!userId) return res.status(401).json({ message: 'Não autorizado.' });
+    if (!req.user.id) return res.status(401).json({ message: 'Não autorizado.' });
 
-    const user = await User.findById(userId);
+    const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ message: 'Usuário não encontrado.' });
     if (user.isVerified) return res.status(400).json({ message: 'E-mail já verificado.' });
 

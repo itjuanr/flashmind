@@ -21,4 +21,7 @@ const FlashcardSchema = new mongoose.Schema({
 FlashcardSchema.index({ userId: 1, deckId: 1 });
 FlashcardSchema.index({ userId: 1, nextReview: 1 });
 
+// Índice de Texto para buscas globais ultra-rápidas e otimizadas
+FlashcardSchema.index({ front: 'text', back: 'text', notes: 'text' });
+
 module.exports = mongoose.model('Flashcard', FlashcardSchema);

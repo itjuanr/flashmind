@@ -14,7 +14,7 @@ exports.saveSession = async (req, res) => {
     }
 
     const session = await StudySession.create({
-      userId: req.user?.id || req.user?._id,
+      userId: req.user.id,
       deckId,
       totalCards,
       correct,
@@ -31,7 +31,7 @@ exports.saveSession = async (req, res) => {
 // @route   GET /api/study/stats
 exports.getStats = async (req, res) => {
   try {
-    const userId = req.user?.id || req.user?._id;
+    const userId = req.user.id;
 
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
@@ -69,7 +69,7 @@ exports.getStats = async (req, res) => {
 exports.getFavorites = async (req, res) => {
   try {
     const favorites = await Flashcard.find({
-      userId: req.user?.id || req.user?._id,
+      userId: req.user.id,
       isFavorite: true,
     })
       .populate({ path: 'deckId', select: 'name emoji color', strictPopulate: false })
@@ -86,7 +86,7 @@ exports.getFavorites = async (req, res) => {
 // @route   DELETE /api/study/reset
 exports.resetStats = async (req, res) => {
   try {
-    const userId = req.user?.id || req.user?._id;
+    const userId = req.user.id;
     const { type = 'all', period = 'all' } = req.body;
 
     // Monta filtro de período
@@ -121,7 +121,7 @@ exports.resetStats = async (req, res) => {
 exports.getDeckHistory = async (req, res) => {
   try {
     const sessions = await StudySession.find({
-      userId: req.user?.id || req.user?._id,
+      userId: req.user.id,
       deckId: req.params.deckId,
     }).sort({ createdAt: -1 }).limit(20);
 
@@ -134,7 +134,7 @@ exports.getDeckHistory = async (req, res) => {
 // @route   GET /api/study/history?days=30
 exports.getHistory = async (req, res) => {
   try {
-    const userId = req.user?.id || req.user?._id;
+    const userId = req.user.id;
     const days = Math.min(parseInt(req.query.days) || 14, 90);
 
     const since = new Date();
@@ -198,7 +198,7 @@ exports.getHistory = async (req, res) => {
 const origGetStats = exports.getStats;
 exports.getStats = async (req, res) => {
   try {
-    const userId = req.user?.id || req.user?._id;
+    const userId = req.user.id;
     const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
     const endOfDay   = new Date(); endOfDay.setHours(23, 59, 59, 999);
     const now = new Date();
@@ -208,7 +208,7 @@ exports.getStats = async (req, res) => {
       StudySession.find({ userId }).lean(),
       Flashcard.countDocuments({ userId, nextReview: { $lte: now } }),
       StudySession.aggregate([
-        { $match: { userId: new mongoose.Types.ObjectId(String(userId)), createdAt: { $gte: startOfDay, $lte: endOfDay } } },
+        { $match: { userId: new mongoose.Types.ObjectId(userId), createdAt: { $gte: startOfDay, $lte: endOfDay } } },
         { $group: { _id: null, total: { $sum: '$totalCards' } } },
       ]),
     ]);

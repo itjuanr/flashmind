@@ -3,7 +3,7 @@ const Deck = require('../models/Deck'); // Mover require para o topo
 
 exports.createFlashcard = async (req, res) => {
   try {
-    const userId = req.user?.id || req.user?._id;
+    const userId = req.user.id;
     const { deckId, front, back, frontImage, backImage, notes, frontAudio, backAudio, cardColor } = req.body;
     const frontOk = front?.trim() || frontImage || frontAudio;
     const backOk  = back?.trim()  || backImage  || backAudio;
@@ -29,7 +29,7 @@ exports.createFlashcard = async (req, res) => {
 
 exports.getCardsByDeck = async (req, res) => {
   try {
-    const userId = req.user?.id || req.user?._id;
+    const userId = req.user.id;
     const limit = Math.min(parseInt(req.query.limit) || 2000, 5000); // Aceita req.query.limit, mas nunca passa de 5000
     const cards = await Flashcard.find({ deckId: req.params.deckId, userId })
       .sort({ position: 1, createdAt: -1 })
@@ -43,7 +43,7 @@ exports.getCardsByDeck = async (req, res) => {
 
 exports.getCardsToStudy = async (req, res) => {
   try {
-    const userId = req.user?.id || req.user?._id;
+    const userId = req.user.id;
     const limit = Math.min(parseInt(req.query.limit) || 500, 1000); // Para estudar, 500 cards por vez é mais que suficiente
     const cards = await Flashcard.find({ deckId: req.params.deckId, userId, nextReview: { $lte: new Date() } })
       .limit(limit)
@@ -56,9 +56,9 @@ exports.getCardsToStudy = async (req, res) => {
 
 exports.updateFlashcard = async (req, res) => {
   try {
-    const userId = req.user?.id || req.user?._id;
+    const userId = req.user.id;
     const card = await Flashcard.findById(req.params.id);
-    if (!card || card.userId.toString() !== String(userId))
+    if (!card || card.userId.toString() !== userId)
       return res.status(404).json({ message: 'Card não encontrado.' });
     const { front, back, frontImage, backImage, notes, frontAudio, backAudio, cardColor } = req.body;
     if (front !== undefined) card.front = front.trim();
@@ -80,7 +80,7 @@ exports.updateFlashcard = async (req, res) => {
 // @route   PATCH /api/flashcards/reorder
 exports.reorderCards = async (req, res) => {
   try {
-    const userId = req.user?.id || req.user?._id;
+    const userId = req.user.id;
     const { order } = req.body; // array de { _id, position }
     await Promise.all(order.map(({ _id, position }) =>
       Flashcard.updateOne({ _id, userId }, { position })
@@ -93,9 +93,9 @@ exports.reorderCards = async (req, res) => {
 
 exports.toggleFavorite = async (req, res) => {
   try {
-    const userId = req.user?.id || req.user?._id;
+    const userId = req.user.id;
     const card = await Flashcard.findById(req.params.id);
-    if (!card || card.userId.toString() !== String(userId))
+    if (!card || card.userId.toString() !== userId)
       return res.status(404).json({ message: 'Card não encontrado.' });
     card.isFavorite = !card.isFavorite;
     await card.save();
@@ -107,9 +107,9 @@ exports.toggleFavorite = async (req, res) => {
 
 exports.deleteFlashcard = async (req, res) => {
   try {
-    const userId = req.user?.id || req.user?._id;
+    const userId = req.user.id;
     const card = await Flashcard.findById(req.params.id);
-    if (!card || card.userId.toString() !== String(userId))
+    if (!card || card.userId.toString() !== userId)
       return res.status(404).json({ message: 'Card não encontrado.' });
     await card.deleteOne();
     res.json({ message: 'Card removido.' });
@@ -134,7 +134,7 @@ exports.reviewCard = async (req, res) => {
 
 exports.getFavoriteCards = async (req, res) => {
   try {
-    const userId = req.user?.id || req.user?._id;
+    const userId = req.user.id;
     const limit = Math.min(parseInt(req.query.limit) || 500, 2000);
     const favorites = await Flashcard.find({ userId, isFavorite: true })
       .populate('deckId', 'name emoji color')

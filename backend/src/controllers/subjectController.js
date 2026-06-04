@@ -5,8 +5,8 @@ const mongoose = require('mongoose');
 // GET /api/notebook/subjects
 exports.getSubjects = async (req, res) => {
   try {
-    const userId = req.user?.id || req.user?._id;
-    const userIdObj = new mongoose.Types.ObjectId(String(userId));
+    const userId = req.user.id;
+    const userIdObj = new mongoose.Types.ObjectId(userId);
 
     // Usar aggregation com $lookup para buscar matérias e contar suas notas em uma única query
     const subjectsWithCount = await Subject.aggregate([
@@ -35,7 +35,7 @@ exports.getSubjects = async (req, res) => {
 // POST /api/notebook/subjects
 exports.createSubject = async (req, res) => {
   try {
-    const userId = req.user?.id || req.user?._id;
+    const userId = req.user.id;
     const { name, semester, color, emoji, description } = req.body;
     
     const subject = await Subject.create({ 
@@ -54,7 +54,7 @@ exports.createSubject = async (req, res) => {
 // PUT /api/notebook/subjects/:id
 exports.updateSubject = async (req, res) => {
   try {
-    const userId = req.user?.id || req.user?._id;
+    const userId = req.user.id;
     
     const subject = await Subject.findOneAndUpdate(
       { _id: req.params.id, userId },
@@ -70,7 +70,7 @@ exports.updateSubject = async (req, res) => {
 // DELETE /api/notebook/subjects/:id
 exports.deleteSubject = async (req, res) => {
   try {
-    const userId = req.user?.id || req.user?._id;
+    const userId = req.user.id;
     
     const subject = await Subject.findOneAndDelete({ _id: req.params.id, userId });
     if (!subject) return res.status(404).json({ message: 'Matéria não encontrada.' });
