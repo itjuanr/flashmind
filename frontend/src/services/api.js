@@ -24,7 +24,12 @@ api.interceptors.response.use(
     if (err.response?.status === 401 && !isAuthRoute) {
       localStorage.removeItem('token');
       localStorage.removeItem('fm_token');
-      if (window.location.pathname !== '/login') {
+      
+      const path = window.location.pathname;
+      const publicRoutes = ['/', '/login', '/register', '/forgot-password', '/contact'];
+      const isPublicDynamicRoute = path.startsWith('/reset-password/') || path.startsWith('/verify-email/') || path.startsWith('/share/');
+      
+      if (!publicRoutes.includes(path) && !isPublicDynamicRoute) {
         window.location.href = '/login';
       }
     }
