@@ -32,6 +32,18 @@ exports.getSubjects = async (req, res) => {
   } catch (e) { res.status(500).json({ message: e.message }); }
 };
 
+// GET /api/notebook/subjects/:id
+exports.getSubjectById = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const subject = await Subject.findOne({ _id: req.params.id, userId }).lean();
+    if (!subject) {
+      return res.status(404).json({ message: 'Matéria não encontrada.' });
+    }
+    res.json(subject);
+  } catch (e) { res.status(500).json({ message: e.message }); }
+};
+
 // POST /api/notebook/subjects
 exports.createSubject = async (req, res) => {
   try {

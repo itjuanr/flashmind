@@ -56,6 +56,49 @@ exports.getDecks = async (req, res) => {
   }
 };
 
+// @desc    Listar decks de uma matéria específica
+// @route   GET /api/decks/subject/:subjectId
+exports.getDecksBySubject = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { subjectId } = req.params;
+    const now = new Date();
+    const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+    const deckFilter = { userId };
+    if (subjectId === 'unassigned') {
+      deckFilter.subjectId = null;
+    } else {
+      deckFilter.subjectId = subjectId;
+    }
+
+    const decks = await Deck.find(deckFilter).sort({ createdAt: -1 }).lean();
+    const deckIds = decks.map(d => d._id);
+
+    if (deckIds.length === 0) {
+      return res.json([]);
+    }
+
+    const counts = await Flashcard.aggregate([
+      { $match: { userId: new mongoose.Types.ObjectId(userId), deckId: { $in: deckIds } } },
+      {
+        $group: {
+          _id: '$deckId',
+          flashcardCount: { $sum: 1 },
+          dueCount: { $sum: { $cond: [{ $lte: ['$nextReview', now] }, 1, 0] } },
+          masteredCount: { $sum: { $cond: [{ $gt: ['$nextReview', sevenDaysFromNow] }, 1, 0] } }
+        }
+      }
+    ]);
+
+    const countsMap = new Map(counts.map(c => [c._id.toString(), c]));
+    const result = decks.map(deck => ({ ...deck, ...(countsMap.get(deck._id.toString()) || { flashcardCount: 0, dueCount: 0, masteredCount: 0 }) }));
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ message: 'Erro ao buscar decks da matéria.', error: error.message });
+  }
+};
+
 // @desc    Buscar deck por ID
 // @route   GET /api/decks/:id
 exports.getDeck = async (req, res) => {
