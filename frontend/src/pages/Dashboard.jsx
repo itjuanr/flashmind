@@ -356,6 +356,8 @@ export default function Dashboard() {
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   // Filtros e ordenação
+  const sortRef = useRef();
+  const subjectSortRef = useRef();
   const [sortBy, setSortBy]         = useState('recent');
   const [subjectSortBy, setSubjectSortBy] = useState('name-az');
   const [showSort, setShowSort]     = useState(false);
@@ -385,6 +387,19 @@ export default function Dashboard() {
 
     api.get('/study/stats').then((res) => setStats(res.data)).catch(() => {});
     api.get('/study/history?days=7').then((res) => setStreak(res.data.streak || 0)).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (sortRef.current && !sortRef.current.contains(e.target)) {
+        setShowSort(false);
+      }
+      if (subjectSortRef.current && !subjectSortRef.current.contains(e.target)) {
+        setShowSubjectSort(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
   }, []);
 
   // Tema automático (só na primeira visita)
