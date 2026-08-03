@@ -8,7 +8,7 @@ const mongoose = require('mongoose');
 exports.createDeck = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { name, description, color, emoji, deckImage, tags, reviewSettings } = req.body;
+    const { name, description, color, emoji, deckImage, tags, reviewSettings, subjectId } = req.body;
     if (!name?.trim()) return res.status(400).json({ message: 'O nome do deck é obrigatório.' });
     const deck = await Deck.create({
       userId,
@@ -16,6 +16,7 @@ exports.createDeck = async (req, res) => {
       deckImage: deckImage || null,
       tags: Array.isArray(tags) ? tags.map(t => t.trim().toLowerCase()).filter(Boolean) : [],
       reviewSettings: reviewSettings || { notify: true, newCardDelay: 1 },
+      subjectId: subjectId || null,
     });
     res.status(201).json({ ...deck.toObject(), flashcardCount: 0 });
   } catch (error) {
@@ -33,7 +34,7 @@ exports.getDecks = async (req, res) => {
 
     // Busca os decks e, em paralelo, agrega as contagens dos flashcards
     const [decks, counts] = await Promise.all([
-      Deck.find({ userId }).sort({ createdAt: -1 }).lean(),
+      Deck.find({ userId }).populate('subjectId', 'name emoji').sort({ createdAt: -1 }).lean(),
       Flashcard.aggregate([
         { $match: { userId: new mongoose.Types.ObjectId(userId) } },
         {
@@ -60,7 +61,7 @@ exports.getDecks = async (req, res) => {
 exports.getDeck = async (req, res) => {
   try {
     const userId = req.user.id;
-    const deck = await Deck.findById(req.params.id).lean();
+    const deck = await Deck.findById(req.params.id).populate('subjectId', 'name').lean();
     if (!deck || deck.userId.toString() !== userId)
       return res.status(404).json({ message: 'Deck não encontrado.' });
     res.json(deck);
@@ -77,7 +78,7 @@ exports.updateDeck = async (req, res) => {
     const deck = await Deck.findById(req.params.id);
     if (!deck || deck.userId.toString() !== userId)
       return res.status(404).json({ message: 'Deck não encontrado.' });
-    const { name, description, color, emoji, deckImage, tags, reviewSettings } = req.body;
+    const { name, description, color, emoji, deckImage, tags, reviewSettings, subjectId } = req.body;
     if (name) deck.name = name.trim();
     if (description !== undefined) deck.description = description;
     if (color) deck.color = color;
@@ -85,6 +86,7 @@ exports.updateDeck = async (req, res) => {
     if (deckImage !== undefined) deck.deckImage = deckImage || null;
     if (tags !== undefined) deck.tags = Array.isArray(tags) ? tags.map(t => t.trim().toLowerCase()).filter(Boolean) : [];
     if (reviewSettings !== undefined) deck.reviewSettings = { notify: reviewSettings.notify ?? true, newCardDelay: reviewSettings.newCardDelay ?? 1 };
+    if (subjectId !== undefined) deck.subjectId = subjectId || null;
     await deck.save();
     res.json(deck.toObject());
   } catch (error) {
@@ -138,6 +140,7 @@ exports.cloneDeck = async (req, res) => {
       description: original.description,
       color: original.color, emoji: original.emoji,
       deckImage: original.deckImage, tags: original.tags,
+      subjectId: original.subjectId,
     });
     const cards = await Flashcard.find({ deckId: original._id }).lean();
     if (cards.length > 0) {
@@ -214,6 +217,7 @@ exports.cloneSharedDeck = async (req, res) => {
       tags: original.tags,
       deckImage: original.deckImage,
       reviewSettings: original.reviewSettings,
+      subjectId: original.subjectId,
     });
 
     const cards = await Flashcard.find({ deckId: original._id }).lean();

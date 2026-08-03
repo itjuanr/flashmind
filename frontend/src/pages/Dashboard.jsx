@@ -8,7 +8,7 @@ import { useTheme } from '../context/ThemeContext';
 import {
   Plus, Book, Play, Trash2, X, Loader2, BrainCircuit,
   LayoutGrid, Pencil, Check, Star, RotateCcw, Image,
-  BookOpen, GripVertical, ListOrdered, ChevronUp,
+  BookOpen, GripVertical, ListOrdered, ChevronUp, Folder,
   ArrowDownAZ, ArrowUpAZ, Clock, Flame, Files, Tag,
   SortAsc, ChevronDown, Sparkles, Bell, Keyboard,
 } from 'lucide-react';
@@ -43,12 +43,14 @@ function DeckModal({ onClose, onSaved, editing, toast }) {
   const isDark = theme === 'dark';
   const fileRef = useRef();
   const tagInputRef = useRef();
+  const [subjects, setSubjects] = useState([]);
 
   const [form, setForm] = useState({
     name:        editing?.name        || '',
     description: editing?.description || '',
     emoji:       editing?.emoji       || '📚',
     color:       editing?.color       || '#4F8EF7',
+    subjectId:   editing?.subjectId?._id || '',
     deckImage:   editing?.deckImage   || null,
     tags:        editing?.tags        || [],
     reviewSettings: editing?.reviewSettings || { notify: true, newCardDelay: 1 },
@@ -57,6 +59,12 @@ function DeckModal({ onClose, onSaved, editing, toast }) {
   const [tagInput, setTagInput] = useState('');
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState('');
+
+  useEffect(() => {
+    api.get('/notebook/subjects')
+      .then(res => setSubjects(res.data))
+      .catch(() => {}); // Erro silencioso, o campo simplesmente não aparece
+  }, []);
 
   const emojis = ['📚', '🧬', '🌍', '💻', '🎯', '🔬', '🏛️', '✏️', '🎨', '🚀'];
   const colors = ['#4F8EF7', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
@@ -104,7 +112,7 @@ function DeckModal({ onClose, onSaved, editing, toast }) {
 
   const surface = isDark ? 'bg-[#0F0F18]' : 'bg-white';
   const inputCls = `w-full border px-4 py-3 rounded-xl outline-none transition-all text-sm ${
-    isDark
+    isDark 
       ? 'bg-white/4 border-white/8 focus:border-blue-500/50 text-white placeholder-slate-600'
       : 'bg-black/3 border-black/8 focus:border-blue-500/50 text-slate-800 placeholder-slate-400'
   }`;
@@ -194,6 +202,27 @@ function DeckModal({ onClose, onSaved, editing, toast }) {
             <textarea placeholder="Sobre o que é esse deck?" rows={2} className={`${inputCls} resize-none`}
               value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
           </div>
+
+          {/* Matéria */}
+          {subjects.length > 0 && (
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">Matéria (opcional)</label>
+              <div className="relative">
+                <Folder size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+                <select
+                  value={form.subjectId}
+                  onChange={(e) => setForm({ ...form, subjectId: e.target.value })}
+                  className={`${inputCls} pl-9 appearance-none`}
+                >
+                  <option value="">Nenhuma matéria</option>
+                  {subjects.map((s) => (
+                    <option key={s._id} value={s._id}>{s.emoji} {s.name}</option>
+                  ))}
+                </select>
+                <ChevronDown size={14} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+              </div>
+            </div>
+          )}
 
           {/* Tags */}
           <div>
@@ -328,11 +357,14 @@ export default function Dashboard() {
 
   // Filtros e ordenação
   const [sortBy, setSortBy]         = useState('recent');
+  const [subjectSortBy, setSubjectSortBy] = useState('name-az');
   const [showSort, setShowSort]     = useState(false);
+  const [showSubjectSort, setShowSubjectSort] = useState(false);
   const [activeTag, setActiveTag]   = useState(null); // tag ativa para filtrar
   const [showShortcuts, setShowShortcuts] = useState(false);
 
   // Drag-and-drop
+  const [studyingSubject, setStudyingSubject] = useState(null);
   const [studyQueue, setStudyQueue]       = useState([]);
   const [queueOpen, setQueueOpen]         = useState(false);
   const [draggingId, setDraggingId]       = useState(null);
@@ -376,6 +408,13 @@ export default function Dashboard() {
     return () => window.removeEventListener('keydown', handler);
   }, []);
 
+  const SUBJECT_SORT_OPTIONS = [
+    { value: 'name-az',    label: 'Nome (A → Z)',     icon: ArrowDownAZ },
+    { value: 'name-za',    label: 'Nome (Z → A)',     icon: ArrowUpAZ },
+    { value: 'due-count',  label: 'Mais revisões',    icon: RotateCcw },
+    { value: 'deck-count', label: 'Mais decks',       icon: Book },
+  ];
+
   // Todas as tags disponíveis
   const allTags = [...new Set(decks.flatMap((d) => d.tags || []))].sort();
 
@@ -384,6 +423,41 @@ export default function Dashboard() {
     activeTag ? decks.filter((d) => (d.tags || []).includes(activeTag)) : decks,
     sortBy
   );
+
+  // Agrupa os decks filtrados por matéria
+  const groupedDecks = filteredDecks.reduce((acc, deck) => {
+    const subjectId = deck.subjectId?._id || 'unassigned';
+    if (!acc[subjectId]) {
+      acc[subjectId] = {
+        subject: deck.subjectId || { _id: 'unassigned', name: 'Sem matéria', emoji: '🗂️' },
+        decks: []
+      };
+    }
+    acc[subjectId].decks.push(deck);
+    return acc;
+  }, {});
+
+  const sortedGroupIds = Object.keys(groupedDecks).sort((a, b) => {
+    if (a === 'unassigned') return 1;
+    if (b === 'unassigned') return -1;
+
+    const groupA = groupedDecks[a];
+    const groupB = groupedDecks[b];
+
+    switch (subjectSortBy) {
+      case 'name-za':
+        return (groupB.subject.name || '').localeCompare(groupA.subject.name || '');
+      case 'due-count':
+        const dueA = groupA.decks.reduce((acc, d) => acc + (d.dueCount || 0), 0);
+        const dueB = groupB.decks.reduce((acc, d) => acc + (d.dueCount || 0), 0);
+        return dueB - dueA;
+      case 'deck-count':
+        return groupB.decks.length - groupA.decks.length;
+      case 'name-az':
+      default:
+        return (groupA.subject.name || '').localeCompare(groupB.subject.name || '');
+    }
+  });
 
   const handleSaved = async (deck, isEdit) => {
     // Sempre recarrega a lista completa para garantir campos atualizados
@@ -437,6 +511,28 @@ export default function Dashboard() {
     } catch { toast('Erro ao duplicar deck.', 'error'); }
   };
 
+  const handleStudySubject = async (subject) => {
+    if (!subject?._id) return;
+    setStudyingSubject(subject._id);
+    try {
+      const res = await api.get(`/study/subject/${subject._id}/study`);
+      if (res.data.length === 0) {
+        toast('Nenhum card para revisar nesta matéria agora.', 'info');
+        return;
+      }
+      navigate('/study', {
+        state: {
+          cards: res.data,
+          title: `Revisão de ${subject.name}`,
+        },
+      });
+    } catch (error) {
+      toast('Erro ao buscar cards da matéria.', 'error');
+    } finally {
+      setStudyingSubject(null);
+    }
+  };
+
   // Drag helpers
   const handleDragStart = (e, deckId) => { setDraggingId(deckId); e.dataTransfer.effectAllowed = 'copy'; e.dataTransfer.setData('text/plain', deckId); };
   const handleDragEnd   = () => setDraggingId(null);
@@ -462,6 +558,7 @@ export default function Dashboard() {
   const closeModal = () => { setShowModal(false); setEditing(null); };
   const firstName = user?.name?.split(' ')[0] || '';
   const SortIcon = SORT_OPTIONS.find((s) => s.value === sortBy)?.icon || SortAsc;
+  const SubjectSortIcon = SUBJECT_SORT_OPTIONS.find((s) => s.value === subjectSortBy)?.icon || SortAsc;
 
   // Badge de cards vencidos total
   const totalDue = decks.reduce((a, d) => (d.reviewSettings?.notify !== false ? a + (d.dueCount || 0) : a), 0);
@@ -737,34 +834,68 @@ export default function Dashboard() {
               </div>
             )}
 
-            {/* Ordenação */}
-            <div className="ml-auto relative">
-              <button
-                onClick={() => setShowSort((v) => !v)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium border transition-all ${
-                  isDark ? 'text-slate-400 border-white/8 hover:border-white/15' : 'text-slate-500 border-black/8 hover:border-black/15'
-                }`}
-              >
-                <SortIcon size={12} />
-                {SORT_OPTIONS.find((s) => s.value === sortBy)?.label}
-                <ChevronDown size={11} className={`transition-transform ${showSort ? 'rotate-180' : ''}`} />
-              </button>
-              {showSort && (
-                <div className={`absolute right-0 top-full mt-1 w-44 rounded-2xl border shadow-xl overflow-hidden z-30 ${isDark ? 'bg-[#0F0F18] border-white/10' : 'bg-white border-black/8'}`}>
-                  {SORT_OPTIONS.map((opt) => {
-                    const Icon = opt.icon;
-                    return (
-                      <button key={opt.value} onClick={() => { setSortBy(opt.value); setShowSort(false); }}
-                        className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-medium transition-colors ${
-                          sortBy === opt.value ? 'text-blue-400 bg-blue-500/10' : isDark ? 'text-slate-400 hover:bg-white/5' : 'text-slate-600 hover:bg-black/4'
-                        }`}>
-                        <Icon size={13} /> {opt.label}
-                        {sortBy === opt.value && <Check size={11} className="ml-auto" />}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
+            <div className="ml-auto flex items-center gap-3">
+              {/* Ordenação de Matérias */}
+              <div className="relative" ref={subjectSortRef}>
+                <button
+                  onClick={() => setShowSubjectSort((v) => !v)}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium border transition-all ${
+                    isDark ? 'text-slate-400 border-white/8 hover:border-white/15' : 'text-slate-500 border-black/8 hover:border-black/15'
+                  }`}
+                >
+                  <SubjectSortIcon size={12} />
+                  <span className="hidden sm:inline">Ordenar matérias:</span>
+                  <span className="font-semibold">{SUBJECT_SORT_OPTIONS.find((s) => s.value === subjectSortBy)?.label}</span>
+                  <ChevronDown size={11} className={`transition-transform ${showSubjectSort ? 'rotate-180' : ''}`} />
+                </button>
+                {showSubjectSort && (
+                  <div className={`absolute right-0 top-full mt-1 w-48 rounded-2xl border shadow-xl overflow-hidden z-30 ${isDark ? 'bg-[#0F0F18] border-white/10' : 'bg-white border-black/8'}`}>
+                    {SUBJECT_SORT_OPTIONS.map((opt) => {
+                      const Icon = opt.icon;
+                      return (
+                        <button key={opt.value} onClick={() => { setSubjectSortBy(opt.value); setShowSubjectSort(false); }}
+                          className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-medium transition-colors ${
+                            subjectSortBy === opt.value ? 'text-blue-400 bg-blue-500/10' : isDark ? 'text-slate-400 hover:bg-white/5' : 'text-slate-600 hover:bg-black/4'
+                          }`}>
+                          <Icon size={13} /> {opt.label}
+                          {subjectSortBy === opt.value && <Check size={11} className="ml-auto" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Ordenação de Decks */}
+              <div className="relative" ref={sortRef}>
+                <button
+                  onClick={() => setShowSort((v) => !v)}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium border transition-all ${
+                    isDark ? 'text-slate-400 border-white/8 hover:border-white/15' : 'text-slate-500 border-black/8 hover:border-black/15'
+                  }`}
+                >
+                  <SortIcon size={12} />
+                  <span className="hidden sm:inline">Ordenar decks:</span>
+                  <span className="font-semibold">{SORT_OPTIONS.find((s) => s.value === sortBy)?.label}</span>
+                  <ChevronDown size={11} className={`transition-transform ${showSort ? 'rotate-180' : ''}`} />
+                </button>
+                {showSort && (
+                  <div className={`absolute right-0 top-full mt-1 w-44 rounded-2xl border shadow-xl overflow-hidden z-30 ${isDark ? 'bg-[#0F0F18] border-white/10' : 'bg-white border-black/8'}`}>
+                    {SORT_OPTIONS.map((opt) => {
+                      const Icon = opt.icon;
+                      return (
+                        <button key={opt.value} onClick={() => { setSortBy(opt.value); setShowSort(false); }}
+                          className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-medium transition-colors ${
+                            sortBy === opt.value ? 'text-blue-400 bg-blue-500/10' : isDark ? 'text-slate-400 hover:bg-white/5' : 'text-slate-600 hover:bg-black/4'
+                          }`}>
+                          <Icon size={13} /> {opt.label}
+                          {sortBy === opt.value && <Check size={11} className="ml-auto" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -775,106 +906,103 @@ export default function Dashboard() {
             {[1, 2, 3].map((i) => <div key={i} className="h-52 glass rounded-2xl animate-pulse border border-white/5" />)}
           </div>
         ) : filteredDecks.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {filteredDecks.map((deck) => (
-              <div key={deck._id}
-                className={`glass rounded-2xl border border-white/5 hover:border-white/10 transition-all group relative flex flex-col justify-between p-6 h-auto min-h-[13rem] ${draggingId === deck._id ? 'opacity-50 scale-95' : ''} ${studyQueue.includes(deck._id) ? 'ring-1 ring-blue-500/30' : ''}`}
-              >
-                {/* Glow */}
-                <div className="absolute -top-8 -right-8 w-28 h-28 rounded-full opacity-10 blur-2xl group-hover:opacity-20 transition-opacity pointer-events-none" style={{ backgroundColor: deck.color || '#4F8EF7' }} />
+          <div className="space-y-12">
+            {sortedGroupIds.map(groupId => {
+              const group = groupedDecks[groupId];
+              const { subject, decks: groupDecks } = group;
+              const subjectDueCount = groupDecks.reduce((acc, d) => acc + (d.dueCount || 0), 0);
 
-                {/* Área clicável */}
-                <div className="absolute inset-0 rounded-2xl cursor-pointer z-0" onClick={() => navigate(`/deck/${deck._id}`)} />
-
-                {/* Drag handle */}
-                <div draggable onDragStart={(e) => handleDragStart(e, deck._id)} onDragEnd={handleDragEnd} onClick={(e) => e.stopPropagation()}
-                  title="Arraste para a fila" className="absolute top-3 left-3 z-20 p-1.5 rounded-lg cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity text-slate-500 hover:text-blue-400 hover:bg-blue-500/10">
-                  <GripVertical size={14} />
-                </div>
-
-                {/* Badge na fila */}
-                {studyQueue.includes(deck._id) && (
-                  <div className="absolute top-3 right-12 z-20 w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center pointer-events-none">
-                    <span className="text-white text-[9px] font-bold">{studyQueue.indexOf(deck._id) + 1}</span>
-                  </div>
-                )}
-
-                {/* Topo */}
-                <div className="relative z-10 flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    {deck.deckImage
-                      ? <img src={deck.deckImage} alt={deck.name} className="w-9 h-9 rounded-lg object-cover flex-shrink-0" />
-                      : <span className="text-2xl flex-shrink-0">{deck.emoji || '📚'}</span>}
-                    <div className="min-w-0">
-                      <h3 className="text-white font-semibold text-base leading-tight group-hover:text-blue-300 transition-colors truncate">{deck.name}</h3>
-                      {deck.description && <p className="text-slate-500 text-xs mt-0.5 line-clamp-1">{deck.description}</p>}
-                      {/* Tags */}
-                      {(deck.tags || []).length > 0 && (
-                        <div className="flex gap-1 mt-1.5 flex-wrap">
-                          {deck.tags.slice(0, 3).map((t) => (
-                            <span key={t} className="text-[9px] px-1.5 py-0.5 rounded-md bg-blue-500/10 text-blue-400/70 font-medium">#{t}</span>
-                          ))}
-                        </div>
-                      )}
+              return (
+                <section key={groupId}>
+                  {/* Cabeçalho da Matéria */}
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">{subject.emoji}</span>
+                      <h2 className="text-xl font-bold text-white">{subject.name}</h2>
+                      <span className="text-sm text-slate-500">{groupDecks.length} deck{groupDecks.length !== 1 ? 's' : ''}</span>
                     </div>
-                  </div>
-                  {/* Ações */}
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-2">
-                    <button onClick={() => handleFavoriteDeck(deck._id)}
-                      className={`p-2 rounded-lg transition-all ${deck.isFavorite ? 'text-amber-400 hover:bg-amber-500/10' : 'text-slate-500 hover:text-amber-400 hover:bg-amber-500/10'}`}>
-                      <Star size={14} fill={deck.isFavorite ? 'currentColor' : 'none'} />
-                    </button>
-                    <button onClick={() => handleClone(deck)} title="Duplicar deck"
-                      className="p-2 rounded-lg text-slate-500 hover:text-blue-400 hover:bg-blue-500/10 transition-all">
-                      <Files size={14} />
-                    </button>
-                    <button onClick={() => { setEditing(deck); setShowModal(true); }}
-                      className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-white/10 transition-all">
-                      <Pencil size={14} />
-                    </button>
-                    <button onClick={() => setConfirmDelete(deck)}
-                      className="p-2 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all">
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Rodapé */}
-                <div className="relative z-10 flex items-center justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    {deck.flashcardCount > 0 && (
-                      <div className="mb-1.5">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-slate-600 text-[10px]">{deck.masteredCount || 0}/{deck.flashcardCount} dominados</span>
-                          {deck.dueCount > 0 && deck.reviewSettings?.notify !== false && <span className="text-[10px] font-semibold text-amber-400">{deck.dueCount} para revisar</span>}
-                        </div>
-                        <div className={`h-1 rounded-full w-full ${isDark ? 'bg-white/8' : 'bg-black/8'}`}>
-                          <div className="h-full rounded-full bg-emerald-500 transition-all"
-                            style={{ width: `${Math.round(((deck.masteredCount || 0) / deck.flashcardCount) * 100)}%` }} />
-                        </div>
-                      </div>
-                    )}
-                    <div className="flex items-center gap-1.5 text-slate-500 text-xs">
-                      <Book size={11} />
-                      <span>{deck.flashcardCount || 0} cards</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1.5 flex-shrink-0">
-                    {deck.dueCount > 0 && deck.reviewSettings?.notify !== false && (
-                      <button onClick={() => navigate(`/study/${deck._id}?mode=due`)} title="Revisar cards vencidos"
-                        className="flex items-center gap-1 text-xs font-semibold px-2.5 py-2 rounded-lg transition-all text-amber-400 bg-amber-500/10 hover:bg-amber-500/20">
-                        <RotateCcw size={11} />
+                    {groupId !== 'unassigned' && (
+                      <button
+                        onClick={() => handleStudySubject(subject)}
+                        disabled={studyingSubject === subject._id}
+                        className="flex items-center gap-2 bg-blue-600/10 hover:bg-blue-600/20 disabled:opacity-50 text-blue-400 font-semibold px-4 py-2 rounded-xl transition-all text-sm">
+                        {studyingSubject === subject._id
+                          ? <Loader2 size={15} className="animate-spin" />
+                          : <BookOpen size={15} />
+                        }
+                        Estudar Matéria
+                        {subjectDueCount > 0 && (
+                          <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 text-xs font-bold">{subjectDueCount}</span>
+                        )}
                       </button>
                     )}
-                    <button onClick={() => navigate(`/study/${deck._id}`)}
-                      className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg transition-all"
-                      style={{ backgroundColor: `${deck.color || '#4F8EF7'}18`, color: deck.color || '#4F8EF7' }}>
-                      <Play size={12} fill="currentColor" /> Estudar
-                    </button>
                   </div>
-                </div>
-              </div>
-            ))}
+
+                  {/* Grid de Decks da Matéria */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                    {groupDecks.map((deck) => (
+                      <div key={deck._id}
+                        className={`glass rounded-2xl border border-white/5 hover:border-white/10 transition-all group relative flex flex-col justify-between p-6 h-auto min-h-[13rem] ${draggingId === deck._id ? 'opacity-50 scale-95' : ''} ${studyQueue.includes(deck._id) ? 'ring-1 ring-blue-500/30' : ''}`}
+                      >
+                        <div className="absolute -top-8 -right-8 w-28 h-28 rounded-full opacity-10 blur-2xl group-hover:opacity-20 transition-opacity pointer-events-none" style={{ backgroundColor: deck.color || '#4F8EF7' }} />
+                        <div className="absolute inset-0 rounded-2xl cursor-pointer z-0" onClick={() => navigate(`/deck/${deck._id}`)} />
+                        <div draggable onDragStart={(e) => handleDragStart(e, deck._id)} onDragEnd={handleDragEnd} onClick={(e) => e.stopPropagation()}
+                          title="Arraste para a fila" className="absolute top-3 left-3 z-20 p-1.5 rounded-lg cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity text-slate-500 hover:text-blue-400 hover:bg-blue-500/10">
+                          <GripVertical size={14} />
+                        </div>
+                        {studyQueue.includes(deck._id) && (
+                          <div className="absolute top-3 right-12 z-20 w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center pointer-events-none">
+                            <span className="text-white text-[9px] font-bold">{studyQueue.indexOf(deck._id) + 1}</span>
+                          </div>
+                        )}
+                        <div className="relative z-10 flex items-start justify-between mb-3">
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            {deck.deckImage
+                              ? <img src={deck.deckImage} alt={deck.name} className="w-9 h-9 rounded-lg object-cover flex-shrink-0" />
+                              : <span className="text-2xl flex-shrink-0">{deck.emoji || '📚'}</span>}
+                            <div className="min-w-0">
+                              <h3 className="text-white font-semibold text-base leading-tight group-hover:text-blue-300 transition-colors truncate">{deck.name}</h3>
+                              {deck.description && <p className="text-slate-500 text-xs mt-0.5 line-clamp-1">{deck.description}</p>}
+                              {(deck.tags || []).length > 0 && (
+                                <div className="flex gap-1 mt-1.5 flex-wrap">
+                                  {deck.tags.slice(0, 3).map((t) => (
+                                    <span key={t} className="text-[9px] px-1.5 py-0.5 rounded-md bg-blue-500/10 text-blue-400/70 font-medium">#{t}</span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-2">
+                            <button onClick={() => handleFavoriteDeck(deck._id)} className={`p-2 rounded-lg transition-all ${deck.isFavorite ? 'text-amber-400 hover:bg-amber-500/10' : 'text-slate-500 hover:text-amber-400 hover:bg-amber-500/10'}`}><Star size={14} fill={deck.isFavorite ? 'currentColor' : 'none'} /></button>
+                            <button onClick={() => handleClone(deck)} title="Duplicar deck" className="p-2 rounded-lg text-slate-500 hover:text-blue-400 hover:bg-blue-500/10 transition-all"><Files size={14} /></button>
+                            <button onClick={() => { setEditing(deck); setShowModal(true); }} className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-white/10 transition-all"><Pencil size={14} /></button>
+                            <button onClick={() => setConfirmDelete(deck)} className="p-2 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all"><Trash2 size={14} /></button>
+                          </div>
+                        </div>
+                        <div className="relative z-10 flex items-center justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            {deck.flashcardCount > 0 && (
+                              <div className="mb-1.5">
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="text-slate-600 text-[10px]">{deck.masteredCount || 0}/{deck.flashcardCount} dominados</span>
+                                  {deck.dueCount > 0 && deck.reviewSettings?.notify !== false && <span className="text-[10px] font-semibold text-amber-400">{deck.dueCount} para revisar</span>}
+                                </div>
+                                <div className={`h-1 rounded-full w-full ${isDark ? 'bg-white/8' : 'bg-black/8'}`}><div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${Math.round(((deck.masteredCount || 0) / deck.flashcardCount) * 100)}%` }} /></div>
+                              </div>
+                            )}
+                            <div className="flex items-center gap-1.5 text-slate-500 text-xs"><Book size={11} /><span>{deck.flashcardCount || 0} cards</span></div>
+                          </div>
+                          <div className="flex items-center gap-1.5 flex-shrink-0">
+                            {deck.dueCount > 0 && deck.reviewSettings?.notify !== false && (<button onClick={() => navigate(`/study/${deck._id}?mode=due`)} title="Revisar cards vencidos" className="flex items-center gap-1 text-xs font-semibold px-2.5 py-2 rounded-lg transition-all text-amber-400 bg-amber-500/10 hover:bg-amber-500/20"><RotateCcw size={11} /></button>)}
+                            <button onClick={() => navigate(`/study/${deck._id}`)} className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg transition-all" style={{ backgroundColor: `${deck.color || '#4F8EF7'}18`, color: deck.color || '#4F8EF7' }}><Play size={12} fill="currentColor" /> Estudar</button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )
+            })}
           </div>
         ) : (
           /* Empty state */

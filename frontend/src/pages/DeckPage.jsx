@@ -8,7 +8,7 @@ import { useTheme } from '../context/ThemeContext';
 import {
   Plus, ArrowLeft, Loader2, X, BookOpen, Image, Link, Upload,
   Trash2 as TrashIcon, Download, FileUp, Search, History, FileArchive,
-  CheckCircle2, XCircle, Clock, LayoutGrid, MoreVertical, Copy, FileText,
+  CheckCircle2, XCircle, Clock, LayoutGrid, MoreVertical, Copy, FileText, Folder,
 } from 'lucide-react';
 import CsvImportModal from '../components/CsvImportModal';
 import AudioPicker from '../components/AudioPicker';
@@ -743,7 +743,18 @@ export default function DeckPage() {
                 <div>
                   <h1 className="text-3xl font-bold text-white tracking-tight">{deck?.name}</h1>
                   {deck?.description && <p className="text-slate-500 text-sm mt-1">{deck.description}</p>}
-                  <p className="text-slate-600 text-xs mt-1">{cards.length} cards</p>
+                  <div className="flex items-center gap-2 mt-1.5">
+                    <p className="text-slate-600 text-xs">{cards.length} cards</p>
+                    {deck?.subjectId && (
+                      <>
+                        <span className="text-slate-700">·</span>
+                        <a href={`/notebook/subject/${deck.subjectId._id}`} className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-blue-400 transition-colors">
+                          <Folder size={12} />
+                          <span>{deck.subjectId.name}</span>
+                        </a>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
               <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">

@@ -695,11 +695,15 @@ export default function StudyPage() {
           </div>
 
           <div className="flex flex-col items-center gap-1">
-            {deck?.dueMode && (
-              <span className="text-[10px] font-bold uppercase tracking-widest text-amber-400 flex items-center gap-1">
-                <RotateCcw size={10} /> Revisão rápida
-              </span>
-            )}
+            {customCards && card.deckId?.name ? (
+              <a href={`/deck/${card.deckId._id}`} target="_blank" rel="noopener noreferrer" className="text-[10px] font-bold uppercase tracking-widest text-slate-500 hover:text-blue-400 transition-colors flex items-center gap-1.5">
+                {card.deckId.emoji || '📚'} {card.deckId.name}
+              </a>
+            ) : deck?.dueMode ? (
+                <span className="text-[10px] font-bold uppercase tracking-widest text-amber-400 flex items-center gap-1">
+                  <RotateCcw size={10} /> Revisão rápida
+                </span>
+              ) : null}
             <div className="flex items-center gap-3 text-sm">
               <span className="text-emerald-400 font-semibold flex items-center gap-1">
                 <CheckCircle2 size={14} /> {scores.filter((s) => s >= 3).length}

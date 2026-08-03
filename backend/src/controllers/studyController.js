@@ -1,5 +1,6 @@
 const StudySession = require('../models/StudySession');
 const Flashcard = require('../models/Flashcard');
+const Deck = require('../models/Deck');
 const mongoose = require('mongoose');
 
 
@@ -61,6 +62,38 @@ exports.getStats = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ message: 'Erro ao buscar stats.' });
+  }
+};
+
+// @desc    Buscar cards para estudar de uma matéria inteira
+// @route   GET /api/study/subject/:subjectId/study
+exports.getCardsBySubject = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { subjectId } = req.params;
+    const limit = Math.min(parseInt(req.query.limit) || 500, 1000);
+
+    // 1. Encontrar todos os decks da matéria
+    const decks = await Deck.find({ userId, subjectId }).select('_id').lean();
+    const deckIds = decks.map(d => d._id);
+
+    if (deckIds.length === 0) {
+      return res.json([]);
+    }
+
+    // 2. Buscar os cards vencidos de todos esses decks
+    const cards = await Flashcard.find({
+      userId,
+      deckId: { $in: deckIds },
+      nextReview: { $lte: new Date() }
+    })
+    .populate({ path: 'deckId', select: 'name emoji color' }) // Popula dados do deck no card
+    .limit(limit)
+    .lean();
+
+    res.json(cards);
+  } catch (error) {
+    res.status(500).json({ message: 'Erro ao buscar cards da matéria.' });
   }
 };
 
