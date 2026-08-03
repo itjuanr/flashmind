@@ -36,7 +36,6 @@
     "vite": "^8.0.0-beta.13"
   },
   "overrides": {
-    "vite": "^5.3.1"
-
+    "vite": "^8.0.0-beta.13"
   }
 }
