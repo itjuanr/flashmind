@@ -4,11 +4,181 @@ import { useTheme } from '../context/ThemeContext';
 import { useToast } from '../context/ToastContext';
 import Navbar from '../components/Navbar';
 import {
-  Plus, ChevronLeft, Loader2, BookOpen, Trash2, Calendar,
-  Search, FileText, X, LayoutGrid, Book, Play, RotateCcw,
-  Folder, ChevronDown, Image, Check, Bell, Pencil,
+  Plus, ChevronLeft, Loader2, BookOpen, Trash2, Calendar, Search,
+  FileText, X, LayoutGrid, Book, Play, RotateCcw, Folder,
+  ChevronDown, Image, Check, Bell, Pencil,
 } from 'lucide-react';
 import api from '../services/api';
+
+// ─── Modal: Criar / Editar Deck (Versão Completa) ─────────────────────────────
+function DeckModal({ onClose, onSaved, editing, toast, isDark }) {
+  const fileRef = useRef();
+  const tagInputRef = useRef();
+  const [subjects, setSubjects] = useState([]);
+
+  const [form, setForm] = useState({
+    name:        editing?.name        || '',
+    description: editing?.description || '',
+    emoji:       editing?.emoji       || '📚',
+    color:       editing?.color       || '#4F8EF7',
+    subjectId:   editing?.subjectId?._id || editing?.subjectId || '',
+    deckImage:   editing?.deckImage   || null,
+    tags:        editing?.tags        || [],
+    reviewSettings: editing?.reviewSettings || { notify: true, newCardDelay: 1 },
+  });
+  const [iconMode, setIconMode] = useState(editing?.deckImage ? 'image' : 'emoji');
+  const [tagInput, setTagInput] = useState('');
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState('');
+
+  useEffect(() => {
+    api.get('/notebook/subjects')
+      .then(res => setSubjects(res.data))
+      .catch(() => {}); // Erro silencioso, o campo simplesmente não aparece
+  }, []);
+
+  const emojis = ['📚', '🧬', '🌍', '💻', '🎯', '🔬', '🏛️', '✏️', '🎨', '🚀'];
+  const colors = ['#4F8EF7', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
+
+  const handleFile = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) { alert('Imagem até 2MB.'); return; }
+    const reader = new FileReader();
+    reader.onload = () => setForm((f) => ({ ...f, deckImage: reader.result }));
+    reader.readAsDataURL(file);
+  };
+
+  const addTag = () => {
+    const t = tagInput.trim().toLowerCase();
+    if (!t || form.tags.includes(t) || form.tags.length >= 5) return;
+    setForm((f) => ({ ...f, tags: [...f.tags, t] }));
+    setTagInput('');
+  };
+
+  const removeTag = (t) => setForm((f) => ({ ...f, tags: f.tags.filter((x) => x !== t) }));
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.name.trim()) { setError('Dê um nome para o deck.'); return; }
+    setLoading(true);
+    const payload = { ...form, deckImage: iconMode === 'image' ? form.deckImage : null };
+    try {
+      const res = editing?._id
+        ? await api.put(`/decks/${editing._id}`, payload)
+        : await api.post('/decks', payload);
+      toast(editing?._id ? 'Deck atualizado!' : 'Deck criado!', 'success');
+      onSaved(res.data, !!editing?._id);
+      onClose();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Erro ao salvar deck.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const surface = isDark ? 'bg-[#0F0F18]' : 'bg-white';
+  const inputCls = `w-full border px-4 py-3 rounded-xl outline-none transition-all text-sm ${
+    isDark 
+      ? 'bg-white/4 border-white/8 focus:border-blue-500/50 text-white placeholder-slate-600'
+      : 'bg-black/3 border-black/8 focus:border-blue-500/50 text-slate-800 placeholder-slate-400'
+  }`;
+
+  return (
+    <div className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
+      <div className={`w-full max-w-md ${surface} rounded-3xl border ${isDark ? 'border-white/10' : 'border-black/8'} flex flex-col`} style={{ maxHeight: '90vh' }}>
+        <div className={`flex items-center justify-between px-8 pt-7 pb-4 border-b ${isDark ? 'border-white/8' : 'border-black/6'} flex-shrink-0`}>
+          <div>
+            <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>{editing?._id ? 'Editar deck' : 'Novo deck'}</h2>
+            <p className="text-slate-500 text-sm mt-0.5">{editing?._id ? 'Atualize as informações.' : 'Crie um novo deck para esta matéria.'}</p>
+          </div>
+          <button onClick={onClose} className="text-slate-500 hover:text-slate-300 transition-colors flex-shrink-0"><X size={20} /></button>
+        </div>
+        <div className="overflow-y-auto flex-1 px-8 py-6">
+          {error && <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm px-4 py-3 rounded-xl mb-5">{error}</div>}
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-widest">Ícone</label>
+                <div className="flex gap-1">
+                  {['emoji', 'image'].map((m) => (
+                    <button key={m} type="button" onClick={() => setIconMode(m)}
+                      className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${iconMode === m ? 'bg-blue-500/20 text-blue-400' : 'text-slate-500 hover:text-slate-300'}`}>
+                      {m === 'emoji' ? '😀 Emoji' : '🖼️ Imagem'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {iconMode === 'emoji' ? (
+              <div>
+                <div className="flex gap-2 flex-wrap">
+                  {emojis.map((em) => (
+                    <button key={em} type="button" onClick={() => setForm({ ...form, emoji: em })}
+                      className={`w-10 h-10 rounded-xl text-lg flex items-center justify-center transition-all ${form.emoji === em ? 'bg-blue-500/20 ring-2 ring-blue-500/50' : isDark ? 'bg-white/5 hover:bg-white/10' : 'bg-black/5 hover:bg-black/10'}`}>{em}</button>
+                  ))}
+                  <input type="text" maxLength="2" placeholder="+" value={emojis.includes(form.emoji) ? '' : form.emoji} onChange={(e) => setForm({ ...form, emoji: e.target.value })}
+                    className={`w-10 h-10 rounded-xl text-lg text-center outline-none transition-all ${!emojis.includes(form.emoji) && form.emoji ? 'bg-blue-500/20 ring-2 ring-blue-500/50 text-blue-400' : isDark ? 'bg-white/5 hover:bg-white/10 text-slate-300 placeholder-slate-500' : 'bg-black/5 hover:bg-black/10 text-slate-700 placeholder-slate-400'}`} />
+                </div>
+              </div>
+              ) : (
+                <div>
+                  {form.deckImage ? (
+                    <div className="relative rounded-xl overflow-hidden border border-white/10 bg-black/20 mb-2">
+                      <img src={form.deckImage} alt="ícone" className="w-full max-h-28 object-contain" />
+                      <button type="button" onClick={() => setForm((f) => ({ ...f, deckImage: null }))} className="absolute top-2 right-2 p-1.5 bg-black/60 rounded-lg text-red-400 hover:bg-black/80"><X size={12} /></button>
+                    </div>
+                  ) : (
+                    <div onClick={() => fileRef.current?.click()} className={`w-full border border-dashed rounded-xl px-4 py-5 flex flex-col items-center gap-2 cursor-pointer transition-all group ${isDark ? 'border-white/15 hover:border-blue-500/40' : 'border-black/15 hover:border-blue-500/40'}`}>
+                      <Image size={22} className="text-slate-500 group-hover:text-blue-400 transition-colors" />
+                      <span className="text-slate-500 text-xs">Clique para escolher uma imagem</span>
+                      <span className="text-slate-600 text-xs">PNG, JPG, WEBP — máx 2MB</span>
+                    </div>
+                  )}
+                  <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+                </div>
+              )}
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">Nome *</label>
+              <input type="text" required placeholder="Ex: Biologia Celular" className={inputCls} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">Descrição (opcional)</label>
+              <textarea placeholder="Sobre o que é esse deck?" rows={2} className={`${inputCls} resize-none`} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+            </div>
+            {subjects.length > 0 && (
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">Matéria (opcional)</label>
+                <div className="relative">
+                  <Folder size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+                  <select value={form.subjectId} onChange={(e) => setForm({ ...form, subjectId: e.target.value })} className={`${inputCls} pl-9 appearance-none`}>
+                    <option value="">Nenhuma matéria</option>
+                    {subjects.map((s) => (<option key={s._id} value={s._id}>{s.emoji} {s.name}</option>))}
+                  </select>
+                  <ChevronDown size={14} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+                </div>
+              </div>
+            )}
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-3">Cor</label>
+              <div className="flex gap-2">
+                {colors.map((c) => (
+                  <button key={c} type="button" onClick={() => setForm({ ...form, color: c })} style={{ backgroundColor: c }}
+                    className={`w-8 h-8 rounded-lg transition-all flex items-center justify-center ${form.color === c ? 'ring-2 ring-white/50 scale-110' : 'opacity-50 hover:opacity-90'}`}>
+                    {form.color === c && <Check size={14} className="text-white" />}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white font-semibold py-3.5 rounded-xl transition-all flex items-center justify-center gap-2">
+              {loading ? <><Loader2 size={17} className="animate-spin" /> Salvando...</> : editing?._id ? <><Check size={17} /> Salvar alterações</> : <><Plus size={17} /> Criar deck</>}
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function SubjectPage() {
   const { subjectId } = useParams();
@@ -33,7 +203,7 @@ export default function SubjectPage() {
   const [activeTab, setActiveTab] = useState(query.get('tab') || 'decks');
 
   useEffect(() => {
-    const load = async () => {
+    const loadData = async () => {
       setLoading(true);
       try {
         if (subjectId === 'unassigned') {
@@ -54,8 +224,8 @@ export default function SubjectPage() {
       } catch { toast('Erro ao carregar.', 'error'); }
       finally { setLoading(false); }
     };
-    load();
-  }, [subjectId]);
+    loadData();
+  }, [subjectId, toast]);
 
   const handleCreate = async () => {
     setCreating(true);
@@ -303,7 +473,7 @@ export default function SubjectPage() {
         <DeckModal
           onClose={() => { setShowDeckModal(false); setEditingDeck(null); }}
           onSaved={handleDeckSaved}
-          editing={editingDeck || { subjectId: subject }}
+          editing={editingDeck || { subjectId: subject?._id }}
           toast={toast}
           isDark={isDark}
         />

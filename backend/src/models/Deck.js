@@ -15,6 +15,11 @@ const deckSchema = new mongoose.Schema({
     notify:       { type: Boolean, default: true },
     newCardDelay: { type: Number,  default: 1, enum: [1, 7, 14] },
   },
+  subjectId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Subject',
+    default: null,
+  },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Deck', deckSchema);
