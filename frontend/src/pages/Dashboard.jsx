@@ -12,7 +12,6 @@ import {
   ArrowDownAZ, ArrowUpAZ, Clock, Flame, Files, Tag,
   SortAsc, ChevronDown, Sparkles, Bell, Keyboard,
 } from 'lucide-react';
-
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 const SORT_OPTIONS = [
   { value: 'recent',   label: 'Mais recentes',    icon: Clock },
@@ -37,6 +36,77 @@ function sortDecks(decks, sortBy) {
   }
 }
 
+// ─── Componente de Select com Busca ────────────────────────────────────────────
+function SearchableSelect({ options, value, onChange, placeholder, icon: Icon, isDark }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const selectRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (selectRef.current && !selectRef.current.contains(event.target)) {
+        setIsOpen(false);
+        setSearch('');
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const filteredOptions = options.filter(opt =>
+    opt.label.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const selectedOption = options.find(opt => opt.value === value);
+
+  const inputCls = `w-full border px-4 py-3 rounded-xl outline-none transition-all text-sm text-left flex justify-between items-center ${
+    isDark
+      ? 'bg-white/4 border-white/8 focus:border-blue-500/50'
+      : 'bg-black/3 border-black/8 focus:border-blue-500/50'
+  } ${Icon ? 'pl-9' : ''}`;
+
+  return (
+    <div className="relative" ref={selectRef}>
+      <button type="button" onClick={() => setIsOpen(!isOpen)} className={inputCls}>
+        {Icon && <Icon size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />}
+        <span className={selectedOption && selectedOption.value ? (isDark ? 'text-white' : 'text-slate-800') : 'text-slate-500'}>
+          {selectedOption ? `${selectedOption.icon} ${selectedOption.label}` : placeholder}
+        </span>
+        <ChevronDown size={14} className={`text-slate-500 pointer-events-none transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+
+      {isOpen && (
+        <div className={`absolute top-full mt-2 w-full rounded-2xl border shadow-2xl z-20 overflow-hidden ${isDark ? 'bg-[#0F0F18] border-white/10' : 'bg-white border-black/8'}`}>
+          <div className="p-2">
+            <input
+              type="text"
+              placeholder="Buscar matéria..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              autoFocus
+              className={`w-full border px-3 py-2 rounded-lg outline-none text-xs transition-all ${
+                isDark
+                  ? 'bg-white/4 border-white/8 focus:border-blue-500/50 text-white placeholder-slate-500'
+                  : 'bg-black/3 border-black/8 focus:border-blue-500/50 text-slate-800 placeholder-slate-400'
+              }`}
+            />
+          </div>
+          <div className="max-h-48 overflow-y-auto">
+            {filteredOptions.length > 0
+              ? filteredOptions.map(opt => (
+                  <button key={opt.value} type="button" onClick={() => { onChange(opt.value); setIsOpen(false); setSearch(''); }}
+                    className={`w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center gap-2 ${ value === opt.value ? 'bg-blue-500/10 text-blue-400' : isDark ? 'text-slate-300 hover:bg-white/5' : 'text-slate-600 hover:bg-black/4' }`}>
+                    <span className="text-base">{opt.icon}</span> <span>{opt.label}</span>
+                  </button>
+                ))
+              : <p className="text-center text-xs text-slate-500 py-3">Nenhuma matéria encontrada</p>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Modal: Criar / Editar Deck ────────────────────────────────────────────────
 function DeckModal({ onClose, onSaved, editing, toast }) {
   const { theme } = useTheme();
@@ -49,7 +119,7 @@ function DeckModal({ onClose, onSaved, editing, toast }) {
     name:        editing?.name        || '',
     description: editing?.description || '',
     emoji:       editing?.emoji       || '📚',
-    color:       editing?.color       || '#4F8EF7',
+    color:       editing?.color       || '#3B82F6',
     subjectId:   editing?.subjectId?._id || '',
     deckImage:   editing?.deckImage   || null,
     tags:        editing?.tags        || [],
@@ -67,7 +137,7 @@ function DeckModal({ onClose, onSaved, editing, toast }) {
   }, []);
 
   const emojis = ['📚', '🧬', '🌍', '💻', '🎯', '🔬', '🏛️', '✏️', '🎨', '🚀'];
-  const colors = ['#4F8EF7', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
+  const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
 
   const handleFile = (e) => {
     const file = e.target.files[0];
@@ -207,20 +277,17 @@ function DeckModal({ onClose, onSaved, editing, toast }) {
           {subjects.length > 0 && (
             <div>
               <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">Matéria (opcional)</label>
-              <div className="relative">
-                <Folder size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
-                <select
-                  value={form.subjectId}
-                  onChange={(e) => setForm({ ...form, subjectId: e.target.value })}
-                  className={`${inputCls} pl-9 appearance-none`}
-                >
-                  <option value="">Nenhuma matéria</option>
-                  {subjects.map((s) => (
-                    <option key={s._id} value={s._id}>{s.emoji} {s.name}</option>
-                  ))}
-                </select>
-                <ChevronDown size={14} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
-              </div>
+              <SearchableSelect
+                isDark={isDark}
+                icon={Folder}
+                placeholder="Nenhuma matéria"
+                value={form.subjectId}
+                onChange={(val) => setForm({ ...form, subjectId: val })}
+                options={[
+                  { value: '', label: 'Nenhuma matéria', icon: '🗂️' },
+                  ...subjects.map(s => ({ value: s._id, label: s.name, icon: s.emoji }))
+                ]}
+              />
             </div>
           )}
 
@@ -334,6 +401,7 @@ export default function Dashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const toast    = useToast();
+
   const { theme } = useTheme();
   const isDark = theme === 'dark';
 
@@ -957,9 +1025,9 @@ export default function Dashboard() {
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                     {groupDecks.map((deck) => (
                       <div key={deck._id}
-                        className={`glass rounded-2xl border border-white/5 hover:border-white/10 transition-all group relative flex flex-col justify-between p-6 h-auto min-h-[13rem] ${draggingId === deck._id ? 'opacity-50 scale-95' : ''} ${studyQueue.includes(deck._id) ? 'ring-1 ring-blue-500/30' : ''}`}
+                        className={`glass rounded-2xl border border-white/5 hover:border-white/10 transition-all group relative flex flex-col justify-between p-6 h-auto min-h-[13rem] ${draggingId === deck._id ? 'opacity-50 scale-95' : ''} ${studyQueue.includes(deck._id) ? 'ring-1 ring-blue-500/40' : ''}`}
                       >
-                        <div className="absolute -top-8 -right-8 w-28 h-28 rounded-full opacity-10 blur-2xl group-hover:opacity-20 transition-opacity pointer-events-none" style={{ backgroundColor: deck.color || '#4F8EF7' }} />
+                        <div className="absolute -top-8 -right-8 w-28 h-28 rounded-full opacity-10 blur-2xl group-hover:opacity-20 transition-opacity pointer-events-none" style={{ backgroundColor: deck.color || '#3B82F6' }} />
                         <div className="absolute inset-0 rounded-2xl cursor-pointer z-0" onClick={() => navigate(`/deck/${deck._id}`)} />
                         <div draggable onDragStart={(e) => handleDragStart(e, deck._id)} onDragEnd={handleDragEnd} onClick={(e) => e.stopPropagation()}
                           title="Arraste para a fila" className="absolute top-3 left-3 z-20 p-1.5 rounded-lg cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity text-slate-500 hover:text-blue-400 hover:bg-blue-500/10">
@@ -1009,7 +1077,7 @@ export default function Dashboard() {
                           </div>
                           <div className="flex items-center gap-1.5 flex-shrink-0">
                             {deck.dueCount > 0 && deck.reviewSettings?.notify !== false && (<button onClick={() => navigate(`/study/${deck._id}?mode=due`)} title="Revisar cards vencidos" className="flex items-center gap-1 text-xs font-semibold px-2.5 py-2 rounded-lg transition-all text-amber-400 bg-amber-500/10 hover:bg-amber-500/20"><RotateCcw size={11} /></button>)}
-                            <button onClick={() => navigate(`/study/${deck._id}`)} className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg transition-all" style={{ backgroundColor: `${deck.color || '#4F8EF7'}18`, color: deck.color || '#4F8EF7' }}><Play size={12} fill="currentColor" /> Estudar</button>
+                            <button onClick={() => navigate(`/study/${deck._id}`)} className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg transition-all" style={{ backgroundColor: `${deck.color || '#3B82F6'}18`, color: deck.color || '#3B82F6' }}><Play size={12} fill="currentColor" /> Estudar</button>
                           </div>
                         </div>
                       </div>

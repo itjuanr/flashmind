@@ -1,9 +1,14 @@
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Repeat2, BarChart3, Layers, Sun, Moon } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
+import { useKeepAlive } from '../hooks/useKeepAlive';
 
 export default function Home() {
   const navigate = useNavigate();
+
+  // Hook para manter o backend ativo no Render.com, mesmo sem ninguém logado.
+  useKeepAlive();
+
   const { theme, toggle: toggleTheme } = useTheme();
   const isDark = theme === 'dark';
 
