@@ -211,6 +211,7 @@ Acesse em `http://localhost:5173`
 | GET | `/api/notebook/subjects` | Listar matérias |
 | POST | `/api/notebook/subjects` | Criar matéria |
 | PUT | `/api/notebook/subjects/:id` | Editar matéria |
+| GET | `/api/notebook/subjects/:id` | Buscar matéria por ID |
 | DELETE | `/api/notebook/subjects/:id` | Excluir matéria + aulas |
 | GET | `/api/notebook/subjects/:id/notes` | Listar aulas |
 | POST | `/api/notebook/subjects/:id/notes` | Criar aula |

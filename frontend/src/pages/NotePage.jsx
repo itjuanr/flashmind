@@ -264,23 +264,23 @@ export default function NotePage() {
   useEffect(() => {
     const load = async () => {
       try {
-        const [nRes, sRes] = await Promise.all([
+        // Busca a aula e a matéria específica em paralelo de forma otimizada
+        const [noteRes, subjectRes] = await Promise.all([
           api.get(`/notebook/notes/${noteId}`),
-          api.get('/notebook/subjects'),
+          api.get(`/notebook/subjects/${subjectId}`),
         ]);
-        const n = nRes.data;
-        const dateStr = n.date ? n.date.slice(0, 10) : new Date().toISOString().slice(0, 10);
-        setNote(n);
-        setTitle(n.title || '');
-        setContent(n.content || '');
+        const noteData = noteRes.data;
+        const dateStr = noteData.date ? noteData.date.slice(0, 10) : new Date().toISOString().slice(0, 10);
+        setNote(noteData);
+        setTitle(noteData.title || '');
+        setContent(noteData.content || '');
         setDate(dateStr);
-        setAttachments(n.attachments || []);
+        setAttachments(noteData.attachments || []);
+        setSubject(subjectRes.data);
         // Sincroniza refs
-        titleRef.current   = n.title || '';
-        contentRef.current = n.content || '';
+        titleRef.current   = noteData.title || '';
+        contentRef.current = noteData.content || '';
         dateRef.current    = dateStr;
-        const found = sRes.data.find(s => s._id === subjectId);
-        setSubject(found || null);
       } catch { toast('Erro ao carregar aula.', 'error'); }
       finally { setLoading(false); }
     };

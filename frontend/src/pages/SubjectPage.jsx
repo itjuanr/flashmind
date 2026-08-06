@@ -333,11 +333,14 @@ export default function SubjectPage() {
     }
   };
 
-  const handleDeckSaved = (newDeck, isEdit) => {
-    if (isEdit) {
-      setDecks(prev => prev.map(d => (d._id === newDeck._id ? newDeck : d)));
-    } else {
-      setDecks(prev => [newDeck, ...prev]);
+  const handleDeckSaved = async (newDeck, isEdit) => {
+    // Após criar ou editar um deck, o ideal é recarregar a lista de decks
+    // para garantir que todos os dados (contagens, etc.) estejam atualizados.
+    try {
+      const dRes = await api.get(`/decks/subject/${subjectId}`);
+      setDecks(dRes.data);
+    } catch {
+      toast('Erro ao atualizar a lista de decks.', 'error');
     }
   };
 
