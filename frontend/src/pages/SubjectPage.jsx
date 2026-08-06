@@ -7,7 +7,7 @@ import Navbar from '../components/Navbar';
 import {
   Plus, ChevronLeft, Loader2, BookOpen, Trash2, Calendar, Search,
   FileText, X, LayoutGrid, Book, Play, RotateCcw, Folder, ChevronDown,
-  Image, Check, Bell, Pencil,
+  Image, Check, Bell, Pencil, Share2, Copy,
 } from 'lucide-react';
 import api from '../services/api';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
@@ -210,6 +210,9 @@ export default function SubjectPage() {
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [creating, setCreating]         = useState(false);
   const [studyingSubject, setStudyingSubject] = useState(false);
+  const [shareToken, setShareToken]     = useState(null);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [sharing, setSharing]           = useState(false);
   const [showDeckModal, setShowDeckModal] = useState(false);
   const [editingDeck, setEditingDeck] = useState(null);
   const [totalFlashcards, setTotalFlashcards] = useState(0);
@@ -238,6 +241,7 @@ export default function SubjectPage() {
           // Só a matéria é essencial: sem ela não há o que renderizar.
           if (sRes.status === 'rejected') throw sRes.reason;
           setSubject(sRes.value.data);
+          setShareToken(sRes.value.data.shareToken || null);
 
           // Aulas e decks falham de forma isolada, sem derrubar a página.
           if (nRes.status === 'fulfilled') setNotes(nRes.value.data);
@@ -271,6 +275,25 @@ export default function SubjectPage() {
       const res = await api.post(`/notebook/subjects/${subjectId}/notes`, { title, date: now });
       navigate(`/notebook/${subjectId}/${res.data._id}`);
     } catch { toast('Erro ao criar aula.', 'error'); setCreating(false); }
+  };
+
+  // Gera ou revoga o link público da matéria (leva junto decks e cards).
+  const handleToggleShare = async () => {
+    setSharing(true);
+    try {
+      const res = await api.patch(`/notebook/subjects/${subjectId}/share`);
+      setShareToken(res.data.shareToken);
+      if (res.data.shareToken) {
+        setShowShareModal(true);
+      } else {
+        setShowShareModal(false);
+        toast('Link revogado.', 'info');
+      }
+    } catch {
+      toast('Erro ao compartilhar matéria.', 'error');
+    } finally {
+      setSharing(false);
+    }
   };
 
   const handleStudySubject = async () => {
@@ -374,6 +397,22 @@ export default function SubjectPage() {
             </div>
           </div>
           <div className="flex items-center gap-2 self-start flex-nowrap flex-shrink-0">
+            {subjectId !== 'unassigned' && (
+              <button
+                onClick={() => (shareToken ? setShowShareModal(true) : handleToggleShare())}
+                disabled={sharing}
+                title={shareToken ? 'Gerenciar link público' : 'Compartilhar matéria'}
+                className={`flex items-center gap-2 font-semibold px-4 py-2.5 rounded-xl transition-all text-sm whitespace-nowrap flex-shrink-0 disabled:opacity-50 ${
+                  shareToken
+                    ? 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400'
+                    : isDark
+                      ? 'bg-white/5 hover:bg-white/10 text-slate-300'
+                      : 'bg-black/4 hover:bg-black/8 text-slate-600'
+                }`}>
+                {sharing ? <Loader2 size={15} className="animate-spin" /> : <Share2 size={15} />}
+                Compartilhar
+              </button>
+            )}
             {subjectId !== 'unassigned' && (
               <button onClick={handleStudySubject} disabled={studyingSubject}
                 className="flex items-center gap-2 bg-blue-600/10 hover:bg-blue-600/20 disabled:opacity-50 text-blue-400 font-semibold px-4 py-2.5 rounded-xl transition-all text-sm whitespace-nowrap flex-shrink-0">
@@ -524,6 +563,40 @@ export default function SubjectPage() {
           toast={toast}
           isDark={isDark}
         />
+      )}
+
+      {showShareModal && shareToken && (
+        <Modal onClose={() => setShowShareModal(false)} size="sm">
+          <div className="p-8 text-center">
+            <div className="text-4xl mb-4">🔗</div>
+            <h3 className={`font-bold text-lg mb-2 ${isDark ? 'text-white' : 'text-slate-800'}`}>Matéria compartilhada!</h3>
+            <p className="text-slate-500 text-sm mb-6 leading-relaxed">
+              Quem abrir este link vê <span className={`font-medium ${isDark ? 'text-white' : 'text-slate-800'}`}>{decks.length} deck{decks.length !== 1 ? 's' : ''}</span> e{' '}
+              <span className={`font-medium ${isDark ? 'text-white' : 'text-slate-800'}`}>{totalFlashcards} card{totalFlashcards !== 1 ? 's' : ''}</span>, e pode copiar tudo para a conta dele.
+            </p>
+
+            <div className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border mb-6 ${isDark ? 'bg-white/4 border-white/8' : 'bg-black/3 border-black/8'}`}>
+              <span className="text-xs text-slate-400 truncate flex-1 text-left">
+                {window.location.origin}/share/subject/{shareToken}
+              </span>
+              <button type="button" aria-label="Copiar link"
+                onClick={() => {
+                  navigator.clipboard.writeText(`${window.location.origin}/share/subject/${shareToken}`);
+                  toast('Link copiado!', 'success');
+                }}
+                className="text-blue-400 hover:text-blue-300 flex-shrink-0"><Copy size={14} /></button>
+            </div>
+
+            <div className="flex gap-3">
+              <Button variant="danger" size="lg" fullWidth loading={sharing} onClick={handleToggleShare}>
+                Revogar link
+              </Button>
+              <Button variant="secondary" size="lg" fullWidth onClick={() => setShowShareModal(false)}>
+                Fechar
+              </Button>
+            </div>
+          </div>
+        </Modal>
       )}
 
       {confirmDelete && (

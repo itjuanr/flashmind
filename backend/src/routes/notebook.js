@@ -3,14 +3,22 @@ const router  = express.Router();
 const { protect } = require('../middleware/authMiddleware');
 const {
   getSubjects, createSubject, updateSubject, deleteSubject, getSubjectById,
-  getDecksBySubject,
+  getDecksBySubject, toggleSubjectShare, getSharedSubject, cloneSharedSubject,
 } = require('../controllers/subjectController');
 const {
   getNotes, getNote, createNote, updateNote, deleteNote,
   addAttachment, deleteAttachment, searchNotes,
 } = require('../controllers/noteController');
 
+// ── Pública: visualizar matéria compartilhada (sem login) ──
+// Precisa vir antes do protect. Também antes de '/subjects/:id' para que
+// "share" não seja lido como um id.
+router.get('/subjects/share/:token', getSharedSubject);
+
 router.use(protect);
+
+// Clonar matéria compartilhada — exige login, por isso fica depois do protect
+router.post('/subjects/share/:token/clone', cloneSharedSubject);
 
 // Matérias
 router.get('/subjects',          getSubjects);
@@ -18,6 +26,7 @@ router.post('/subjects',         createSubject);
 router.get('/subjects/:id',      getSubjectById);
 router.put('/subjects/:id',      updateSubject);
 router.delete('/subjects/:id',   deleteSubject);
+router.patch('/subjects/:id/share', toggleSubjectShare);
 
 // Aulas por matéria
 router.get('/subjects/:subjectId/decks',  getDecksBySubject);

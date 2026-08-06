@@ -19,6 +19,7 @@ const StudyPage          = lazy(() => import('./pages/StudyPage'));
 const FavoritesPage      = lazy(() => import('./pages/FavoritesPage'));
 const StatsPage          = lazy(() => import('./pages/StatsPage'));
 const SharePage          = lazy(() => import('./pages/SharePage'));
+const SharedSubjectPage  = lazy(() => import('./pages/SharedSubjectPage'));
 const ContactPage        = lazy(() => import('./pages/ContactPage'));
 const NotebookPage       = lazy(() => import('./pages/NotebookPage'));
 const SubjectPage        = lazy(() => import('./pages/SubjectPage'));
@@ -51,6 +52,9 @@ export default function App() {
                 <Route path="/forgot-password"           element={<ForgotPasswordPage />} />
                 <Route path="/reset-password/:token"     element={<ResetPasswordPage />} />
                 <Route path="/verify-email/:token"       element={<VerifyEmailPage />} />
+                {/* Estática antes da dinâmica: /share/subject/:token não pode
+                    ser lido como um token de deck chamado "subject". */}
+                <Route path="/share/subject/:token"      element={<SharedSubjectPage />} />
                 <Route path="/share/:token"              element={<SharePage />} />
                 <Route path="/contact"                   element={<ContactPage />} />
 

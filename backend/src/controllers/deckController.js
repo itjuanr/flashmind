@@ -218,12 +218,14 @@ exports.toggleShare = async (req, res) => {
     if (!deck || deck.userId.toString() !== userId)
       return res.status(404).json({ message: 'Deck não encontrado.' });
     if (deck.shareToken) {
-      deck.shareToken = null; // revogar
+      // undefined => $unset. Gravar null faria o índice sparse unique indexar
+      // o valor, e o segundo deck revogado colidiria com o primeiro (E11000).
+      deck.shareToken = undefined;
     } else {
       deck.shareToken = crypto.randomBytes(16).toString('hex');
     }
     await deck.save();
-    res.json({ shareToken: deck.shareToken });
+    res.json({ shareToken: deck.shareToken || null });
   } catch (error) {
     res.status(500).json({ message: 'Erro ao compartilhar.' });
   }
@@ -260,7 +262,10 @@ exports.cloneSharedDeck = async (req, res) => {
       tags: original.tags,
       deckImage: original.deckImage,
       reviewSettings: original.reviewSettings,
-      subjectId: original.subjectId,
+      // Sem subjectId: a matéria pertence ao dono original. Copiá-la faria o
+      // deck clonado apontar para uma matéria de outra conta — ele sumiria da
+      // listagem (que filtra por userId) e exporia o nome dessa matéria.
+      subjectId: null,
     });
 
     const cards = await Flashcard.find({ deckId: original._id }).lean();

@@ -7,6 +7,7 @@ const subjectSchema = new mongoose.Schema({
   color:    { type: String, default: '#4F8EF7' },
   emoji:    { type: String, default: '📓' },
   description: { type: String, default: '' },
+  shareToken: { type: String, unique: true, sparse: true },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Subject', subjectSchema);
