@@ -1,5 +1,5 @@
-import { useEffect, useState, useRef, useCallback, memo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useEffect, useState, useRef, useCallback, memo, useMemo } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import api from '../services/api';
 import Navbar from '../components/Navbar';
 import FlashCard from '../components/FlashCard';
@@ -333,10 +333,10 @@ export default function DeckPage() {
     load();
   }, [deckId]);
 
-  const handleSaved = (card, isEdit) => {
+  const handleSaved = useCallback((card, isEdit) => {
     if (isEdit) setCards((prev) => prev.map((c) => (c._id === card._id ? card : c)));
     else setCards((prev) => [card, ...prev]);
-  };
+  }, []);
 
   const handleDelete = async () => {
     if (!confirmDeleteCard) return;
@@ -348,30 +348,44 @@ export default function DeckPage() {
     finally { setConfirmDeleteCard(null); }
   };
 
-  const handleFavorite = async (card) => {
+  const handleFavorite = useCallback(async (card) => {
     try {
       const res = await api.patch(`/flashcards/${card._id}/favorite`);
       setCards((prev) => prev.map((c) => (c._id === card._id ? res.data : c)));
       toast(res.data.isFavorite ? 'Adicionado aos favoritos ⭐' : 'Removido dos favoritos', 'info');
     } catch { toast('Erro ao favoritar.', 'error'); }
-  };
+  }, [toast]);
 
-  const handleDuplicateCard = async (card) => {
+  const handleDuplicateCard = useCallback(async (card) => {
+      try {
+        const res = await api.post('/flashcards', {
+          deckId,
+          front: card.front + ' (cópia)',
+          back: card.back,
+          frontImage: card.frontImage || null,
+          backImage:  card.backImage  || null,
+          frontAudio: card.frontAudio || null,
+          backAudio:  card.backAudio  || null,
+          notes: card.notes || '',
+        });
+        setCards((prev) => [res.data, ...prev]);
+        toast('Card duplicado!', 'success');
+      } catch { toast('Erro ao duplicar card.', 'error'); }
+    }, [deckId, toast]);
+
+  const handleColorChange = useCallback(async (card, color) => {
     try {
-      const res = await api.post('/flashcards', {
-        deckId,
-        front: card.front + ' (cópia)',
-        back: card.back,
-        frontImage: card.frontImage || null,
-        backImage:  card.backImage  || null,
-        frontAudio: card.frontAudio || null,
-        backAudio:  card.backAudio  || null,
-        notes: card.notes || '',
-      });
-      setCards((prev) => [res.data, ...prev]);
-      toast('Card duplicado!', 'success');
-    } catch { toast('Erro ao duplicar card.', 'error'); }
-  };
+      const res = await api.put(`/flashcards/${card._id}`, { cardColor: color });
+      setCards((prev) => prev.map((c) => c._id === card._id ? res.data : c));
+    } catch { toast('Erro ao alterar cor.', 'error'); }
+  }, [toast]);
+
+  const handleEdit = useCallback((card) => {
+    setEditing(card);
+    setShowModal(true);
+  }, []);
+
+  const handleDeleteClick = useCallback((card) => setConfirmDeleteCard(card), []);
 
   const handleShare = async () => {
     setSharing(true);
@@ -407,18 +421,11 @@ export default function DeckPage() {
     const handler = (e) => {
       if (e.key === 'n' || e.key === 'N') {
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-        setEditing(null); setShowModal(true);
+        handleEdit(null);
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, []);
-
-  const handleColorChange = async (card, color) => {
-    try {
-      const res = await api.put(`/flashcards/${card._id}`, { cardColor: color });
-      setCards((prev) => prev.map((c) => c._id === card._id ? res.data : c));
-    } catch { toast('Erro ao alterar cor.', 'error'); }
   };
 
   // Drag & drop reorder
@@ -441,15 +448,30 @@ export default function DeckPage() {
   };
 
   // Ordenação visual dos cards
-  const sortedCards = [...cards].sort((a, b) => {
-    switch (cardSort) {
-      case 'az':    return (a.front||'').localeCompare(b.front||'');
-      case 'za':    return (b.front||'').localeCompare(a.front||'');
-      case 'level': return (b.level||0) - (a.level||0);
-      case 'due':   return new Date(a.nextReview) - new Date(b.nextReview);
-      default:      return (a.position||0) - (b.position||0);
-    }
-  });
+  const sortedCards = useMemo(() => {
+    const copy = [...cards];
+    copy.sort((a, b) => {
+      switch (cardSort) {
+        case 'az':    return (a.front||'').localeCompare(b.front||'');
+        case 'za':    return (b.front||'').localeCompare(a.front||'');
+        case 'level': return (b.level||0) - (a.level||0);
+        case 'due':   return new Date(a.nextReview) - new Date(b.nextReview);
+        default:      return (a.position||0) - (b.position||0);
+      }
+    });
+    return copy;
+  }, [cards, cardSort]);
+
+  // Filtro de busca (sobre cards já ordenados)
+  const filteredCards = useMemo(() => {
+    if (!search.trim()) return sortedCards;
+    const lowerCaseSearch = search.toLowerCase();
+    return sortedCards.filter((c) =>
+      (c.front||'').toLowerCase().includes(lowerCaseSearch) ||
+      (c.back||'').toLowerCase().includes(lowerCaseSearch) ||
+      (c.notes || '').toLowerCase().includes(lowerCaseSearch)
+    );
+  }, [sortedCards, search]);
 
   const CARD_SORT_OPTIONS = [
     { value: 'position', label: 'Ordem manual' },
@@ -628,15 +650,6 @@ export default function DeckPage() {
 
   const closeModal = () => { setShowModal(false); setEditing(null); };
 
-  // Filtro de busca (sobre cards já ordenados)
-  const filtered = search.trim()
-    ? sortedCards.filter((c) =>
-        (c.front||'').toLowerCase().includes(search.toLowerCase()) ||
-        (c.back||'').toLowerCase().includes(search.toLowerCase()) ||
-        (c.notes || '').toLowerCase().includes(search.toLowerCase())
-      )
-    : sortedCards;
-
   return (
     <div className="min-h-screen text-slate-200" style={{ backgroundColor: 'var(--bg)' }}>
       <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[700px] h-[300px] bg-blue-600/5 blur-[120px] rounded-full pointer-events-none" />
@@ -748,10 +761,10 @@ export default function DeckPage() {
                     {deck?.subjectId && (
                       <>
                         <span className="text-slate-700">·</span>
-                        <a href={`/notebook/subject/${deck.subjectId._id}`} className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-blue-400 transition-colors">
+                        <Link to={`/notebook/subject/${deck.subjectId._id}`} className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-blue-400 transition-colors">
                           <Folder size={12} />
                           <span>{deck.subjectId.name}</span>
-                        </a>
+                        </Link>
                       </>
                     )}
                   </div>
@@ -809,7 +822,7 @@ export default function DeckPage() {
                   )}
                 </div>
 
-                <button onClick={() => { setEditing(null); setShowModal(true); }}
+                <button onClick={() => handleEdit(null)}
                   className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-xl font-semibold text-sm transition-all shadow-[0_0_20px_rgba(37,99,235,0.2)] flex items-center gap-2 group">
                   <Plus size={16} className="group-hover:rotate-90 transition-transform duration-200" /> Novo card
                 </button>
@@ -884,13 +897,13 @@ export default function DeckPage() {
                   </div>
                 )}
 
-                {filtered.length > 0 ? (
+                {filteredCards.length > 0 ? (
                   <>
                     {search && (
-                      <p className="text-slate-500 text-xs mb-4">{filtered.length} resultado{filtered.length !== 1 ? 's' : ''} para "{search}"</p>
+                      <p className="text-slate-500 text-xs mb-4">{filteredCards.length} resultado{filteredCards.length !== 1 ? 's' : ''} para "{search}"</p>
                     )}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {filtered.map((card) => (
+                      {filteredCards.map((card) => (
                         <div key={card._id}
                           draggable={cardSort === 'position' && !search}
                           onDragStart={(e) => handleDragStart(e, card._id)}
@@ -901,9 +914,9 @@ export default function DeckPage() {
                         >
                           <FlashCard card={card}
                             onFavorite={handleFavorite}
-                            onEdit={(c) => { setEditing(c); setShowModal(true); }}
+                            onEdit={handleEdit}
                             onDuplicate={handleDuplicateCard}
-                            onDelete={(c) => setConfirmDeleteCard(c)}
+                            onDelete={handleDeleteClick}
                             onColorChange={handleColorChange} />
                         </div>
                       ))}
@@ -923,7 +936,7 @@ export default function DeckPage() {
                         <div className={`p-5 rounded-2xl mb-5 ${isDark ? 'bg-white/4 text-slate-600' : 'bg-black/4 text-slate-400'}`}><BookOpen size={36} /></div>
                         <h3 className={`font-semibold text-lg mb-2 ${isDark ? 'text-white' : 'text-slate-800'}`}>Deck vazio</h3>
                         <p className="text-slate-500 text-sm mb-8 max-w-xs">Adicione seu primeiro flashcard para começar a estudar.</p>
-                        <button onClick={() => setShowModal(true)}
+                        <button onClick={() => handleEdit(null)}
                           className="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-6 py-3 rounded-xl transition-all flex items-center gap-2 text-sm">
                           <Plus size={16} /> Criar primeiro card
                         </button>

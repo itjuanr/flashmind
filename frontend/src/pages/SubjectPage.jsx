@@ -300,7 +300,12 @@ export default function SubjectPage() {
           const calculatedTotalFlashcards = dRes.data.reduce((sum, deck) => sum + (deck.flashcardCount || 0), 0);
           setTotalFlashcards(calculatedTotalFlashcards);
         }
-      } catch { toast('Erro ao carregar.', 'error'); }
+      } catch (error) {
+        if (error.response && error.response.status === 404) {
+          toast('Matéria não encontrada ou acesso negado.', 'error');
+          navigate('/notebook'); // Redireciona para o caderno se a matéria não for encontrada
+        } else { toast('Erro ao carregar dados da matéria.', 'error'); }
+      }
       finally { setLoading(false); }
     };
     loadData();
