@@ -2,7 +2,8 @@ const express = require('express');
 const router  = express.Router();
 const { protect } = require('../middleware/authMiddleware');
 const {
-  getSubjects, createSubject, updateSubject, deleteSubject,
+  getSubjects, createSubject, updateSubject, deleteSubject, getSubjectById,
+  getDecksBySubject,
 } = require('../controllers/subjectController');
 const {
   getNotes, getNote, createNote, updateNote, deleteNote,
@@ -14,10 +15,12 @@ router.use(protect);
 // Matérias
 router.get('/subjects',          getSubjects);
 router.post('/subjects',         createSubject);
+router.get('/subjects/:id',      getSubjectById);
 router.put('/subjects/:id',      updateSubject);
 router.delete('/subjects/:id',   deleteSubject);
 
 // Aulas por matéria
+router.get('/subjects/:subjectId/decks',  getDecksBySubject);
 router.get('/subjects/:subjectId/notes',  getNotes);
 router.post('/subjects/:subjectId/notes', createNote);
 

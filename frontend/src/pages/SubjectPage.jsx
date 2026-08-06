@@ -289,7 +289,7 @@ export default function SubjectPage() {
           const [sRes, nRes, dRes] = await Promise.all([
             api.get(`/notebook/subjects/${subjectId}`),
             api.get(`/notebook/subjects/${subjectId}/notes`),
-            api.get(`/decks/subject/${subjectId}`),
+            api.get(`/notebook/subjects/${subjectId}/decks`),
           ]);
           setSubject(sRes.data);
           setNotes(nRes.data);
