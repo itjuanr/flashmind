@@ -47,7 +47,7 @@ export function ToastProvider({ children }) {
 
       {/* Banner de toasts — centralizado no topo, logo acima do conteúdo.
           pointer-events-none no container deixa clicar através da faixa vazia. */}
-      <div className="fixed top-20 sm:top-24 left-0 right-0 z-[100] flex flex-col items-center gap-2 px-4 pointer-events-none">
+      <div className="fixed top-24 left-0 right-0 z-[100] flex flex-col items-center gap-2 px-4 pointer-events-none">
         {toasts.map((t) => (
           <div
             key={t.id}

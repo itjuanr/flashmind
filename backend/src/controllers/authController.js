@@ -2,7 +2,10 @@ const jwt    = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const User   = require('../models/User');
-const { sendConfirmationEmail, sendPasswordResetEmail } = require('../config/email');
+const {
+  sendConfirmationEmail, sendPasswordResetEmail,
+  sendEmailChangeConfirmation, sendEmailChangeNotice,
+} = require('../config/email');
 
 const signToken = (id) => jwt.sign({ id: id.toString() }, process.env.JWT_SECRET, {
   expiresIn: process.env.JWT_EXPIRES_IN || '30m',
@@ -12,7 +15,16 @@ const userPayload = (user) => ({
   id: user._id.toString(), name: user.name, email: user.email,
   dailyGoal: user.dailyGoal, isVerified: user.isVerified,
   studyGoal: user.studyGoal, studyArea: user.studyArea,
+  avatar: user.avatar || null,
+  pendingEmail: user.pendingEmail || null,
+  // Só para o frontend decidir o que desenhar. Nunca é a barreira de acesso:
+  // quem valida é o adminOnly, lendo o papel do banco a cada requisição.
+  role: user.role || 'user',
 });
+
+// Mesma regra usada no reset de senha — mantida em um só lugar.
+const PASS_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,128}$/;
+const PASS_MSG = 'A senha deve ter no mínimo 8 caracteres, contendo letras maiúsculas, minúsculas, números e símbolos.';
 
 // Sanitiza string — remove caracteres de controle e limita tamanho
 const sanitize = (val, maxLen = 200) =>
@@ -104,13 +116,132 @@ exports.updateMe = async (req, res) => {
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ message: 'Usuário não encontrado.' });
 
-    const { dailyGoal, studyGoal, studyArea } = req.body;
+    const { dailyGoal, studyGoal, studyArea, name, avatar } = req.body;
     if (dailyGoal !== undefined) user.dailyGoal = Math.max(0, Math.min(1000, parseInt(dailyGoal) || 0));
     if (studyGoal !== undefined) user.studyGoal = sanitize(studyGoal, 50);
     if (studyArea !== undefined) user.studyArea = sanitize(studyArea, 50);
+
+    if (name !== undefined) {
+      const clean = sanitize(name, 100);
+      if (!clean) return res.status(400).json({ message: 'O nome não pode ficar vazio.' });
+      user.name = clean;
+    }
+
+    if (avatar !== undefined) {
+      if (avatar === null || avatar === '') {
+        user.avatar = null;
+      } else {
+        if (typeof avatar !== 'string' || !/^data:image\/(png|jpe?g|webp|gif);base64,/.test(avatar))
+          return res.status(400).json({ message: 'Formato de imagem inválido.' });
+        // ~2MB depois do base64 (que infla ~33% sobre o binário original).
+        if (avatar.length > 2_800_000)
+          return res.status(400).json({ message: 'Imagem muito grande. Use uma de até 2MB.' });
+        user.avatar = avatar;
+      }
+    }
+
     await user.save();
     res.json(userPayload(user));
   } catch (e) { res.status(500).json({ message: 'Erro ao atualizar perfil.' }); }
+};
+
+// ── POST /api/auth/change-password ───────────────────────────────────────────
+exports.changePassword = async (req, res) => {
+  try {
+    const currentPassword = typeof req.body.currentPassword === 'string' ? req.body.currentPassword : '';
+    const newPassword     = typeof req.body.newPassword === 'string' ? req.body.newPassword : '';
+
+    if (!PASS_REGEX.test(newPassword)) return res.status(400).json({ message: PASS_MSG });
+
+    const user = await User.findById(req.user.id).select('+password');
+    if (!user) return res.status(404).json({ message: 'Usuário não encontrado.' });
+
+    // Exigir a senha atual impede que uma sessão sequestrada troque a senha.
+    const ok = await bcrypt.compare(currentPassword, user.password);
+    if (!ok) return res.status(400).json({ message: 'Senha atual incorreta.' });
+
+    if (await bcrypt.compare(newPassword, user.password))
+      return res.status(400).json({ message: 'A nova senha precisa ser diferente da atual.' });
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    await user.save();
+    res.json({ message: 'Senha alterada com sucesso!' });
+  } catch (e) { res.status(500).json({ message: 'Erro ao alterar senha.' }); }
+};
+
+// ── POST /api/auth/change-email ──────────────────────────────────────────────
+exports.requestEmailChange = async (req, res) => {
+  try {
+    const password = typeof req.body.password === 'string' ? req.body.password : '';
+    const newEmail = sanitize(req.body.newEmail, 200).toLowerCase();
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail))
+      return res.status(400).json({ message: 'E-mail inválido.' });
+
+    const user = await User.findById(req.user.id).select('+password');
+    if (!user) return res.status(404).json({ message: 'Usuário não encontrado.' });
+
+    const ok = await bcrypt.compare(password, user.password);
+    if (!ok) return res.status(400).json({ message: 'Senha incorreta.' });
+
+    if (newEmail === user.email)
+      return res.status(400).json({ message: 'Este já é o seu e-mail atual.' });
+
+    const taken = await User.findOne({ email: newEmail });
+    if (taken) return res.status(400).json({ message: 'Este e-mail já está em uso.' });
+
+    const token = crypto.randomBytes(32).toString('hex');
+    user.pendingEmail       = newEmail;
+    user.emailChangeToken   = token;
+    user.emailChangeExpires = new Date(Date.now() + 60 * 60 * 1000);
+    await user.save();
+
+    res.json({ message: `Enviamos um link de confirmação para ${newEmail}.`, pendingEmail: newEmail });
+
+    const oldAddress = user.email;
+    setImmediate(() => {
+      sendEmailChangeConfirmation(user, newEmail, token)
+        .catch(e => console.error('Erro ao enviar confirmação de troca:', e.message));
+      // Aviso ao endereço antigo — é a rede de segurança se a conta foi tomada.
+      sendEmailChangeNotice({ name: user.name, email: oldAddress }, newEmail)
+        .catch(e => console.error('Erro ao avisar e-mail antigo:', e.message));
+    });
+  } catch (e) { res.status(500).json({ message: 'Erro ao solicitar troca de e-mail.' }); }
+};
+
+// ── GET /api/auth/confirm-email-change/:token ────────────────────────────────
+exports.confirmEmailChange = async (req, res) => {
+  try {
+    if (!/^[a-f0-9]{64}$/.test(req.params.token))
+      return res.status(400).json({ message: 'Token inválido.' });
+
+    const user = await User.findOne({
+      emailChangeToken: req.params.token,
+      emailChangeExpires: { $gt: new Date() },
+    });
+    if (!user || !user.pendingEmail)
+      return res.status(400).json({ message: 'Link inválido ou expirado. Solicite novamente.' });
+
+    // Recheca no momento da confirmação: alguém pode ter registrado esse
+    // endereço entre o pedido e o clique.
+    const taken = await User.findOne({ email: user.pendingEmail, _id: { $ne: user._id } });
+    if (taken) {
+      user.pendingEmail = undefined;
+      user.emailChangeToken = undefined;
+      user.emailChangeExpires = undefined;
+      await user.save();
+      return res.status(400).json({ message: 'Este e-mail foi registrado por outra conta. Tente outro.' });
+    }
+
+    user.email       = user.pendingEmail;
+    user.isVerified  = true; // o clique no link já provou a posse do endereço
+    user.pendingEmail       = undefined;
+    user.emailChangeToken   = undefined;
+    user.emailChangeExpires = undefined;
+    await user.save();
+
+    res.json({ message: 'E-mail alterado com sucesso!', email: user.email });
+  } catch (e) { res.status(500).json({ message: 'Erro ao confirmar troca de e-mail.' }); }
 };
 
 // ── GET /api/auth/verify/:token ───────────────────────────────────────────────

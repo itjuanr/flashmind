@@ -106,6 +106,74 @@ exports.sendPasswordResetEmail = async (user, token) => {
   });
 };
 
+// Confirmação de troca de e-mail — enviada ao endereço NOVO.
+// É o que prova que o usuário controla a caixa para a qual quer migrar.
+exports.sendEmailChangeConfirmation = async (user, newEmail, token) => {
+  const link = `${BASE_URL}/confirm-email-change/${token}`;
+  const resend = getResend();
+  await resend.emails.send({
+    from: 'FlashMind <juanrodrigues@flashmind.site>',
+    to: newEmail,
+    subject: '🔄 Confirme seu novo e-mail — FlashMind',
+    html: emailBase(`
+      <h2 style="margin:0 0 12px;font-size:24px;font-weight:900;color:#ffffff;letter-spacing:-0.5px;">
+        Confirme seu novo e-mail 🔄
+      </h2>
+      <p style="margin:0 0 28px;font-size:14px;color:#94a3b8;line-height:1.7;">
+        Olá, <strong style="color:#e2e8f0;">${user.name}</strong>!<br>
+        Você pediu para trocar o e-mail da sua conta FlashMind para
+        <strong style="color:#e2e8f0;">${newEmail}</strong>.
+        Confirme abaixo para concluir a troca.
+      </p>
+      <a href="${link}" style="display:inline-block;background:#2563eb;color:#ffffff;font-weight:700;font-size:14px;padding:14px 32px;border-radius:12px;text-decoration:none;">
+        Confirmar novo e-mail →
+      </a>
+      <table cellpadding="0" cellspacing="0" style="margin-top:24px;">
+        <tr>
+          <td style="background:rgba(37,99,235,0.08);border:1px solid rgba(37,99,235,0.2);border-radius:10px;padding:14px 18px;">
+            <p style="margin:0;font-size:12px;color:#64748b;line-height:1.6;">
+              ⏱ Expira em <strong style="color:#94a3b8;">1 hora</strong>.<br>
+              🔒 Até você confirmar, o acesso continua pelo e-mail antigo.
+            </p>
+          </td>
+        </tr>
+      </table>
+    `),
+  });
+};
+
+// Aviso ao endereço ANTIGO. Se a troca não foi o usuário, é por aqui que ele
+// descobre a tempo — mandar só para o novo endereço esconderia o sequestro.
+exports.sendEmailChangeNotice = async (user, newEmail) => {
+  const resend = getResend();
+  await resend.emails.send({
+    from: 'FlashMind <juanrodrigues@flashmind.site>',
+    to: user.email,
+    subject: '⚠️ Solicitação de troca de e-mail — FlashMind',
+    html: emailBase(`
+      <h2 style="margin:0 0 12px;font-size:24px;font-weight:900;color:#ffffff;letter-spacing:-0.5px;">
+        Pediram para trocar seu e-mail ⚠️
+      </h2>
+      <p style="margin:0 0 20px;font-size:14px;color:#94a3b8;line-height:1.7;">
+        Olá, <strong style="color:#e2e8f0;">${user.name}</strong>.<br>
+        Recebemos um pedido para mudar o e-mail da sua conta para
+        <strong style="color:#e2e8f0;">${newEmail}</strong>.
+      </p>
+      <table cellpadding="0" cellspacing="0">
+        <tr>
+          <td style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:10px;padding:14px 18px;">
+            <p style="margin:0;font-size:12px;color:#94a3b8;line-height:1.6;">
+              <strong style="color:#f87171;">Não foi você?</strong><br>
+              Troque sua senha imediatamente — alguém pode ter acesso à sua conta.
+              A troca só se conclui se o link enviado ao novo endereço for aberto.
+            </p>
+          </td>
+        </tr>
+      </table>
+    `),
+  });
+};
+
 // Testa conexão com Resend
 exports.testConnection = async () => {
   const resend = getResend();

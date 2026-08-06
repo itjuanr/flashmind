@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import GlobalSearch from './GlobalSearch';
-import { Sparkles, LayoutDashboard, Star, LogOut, ChevronDown, Menu, X, Sun, Moon, BarChart2, Bell, Mail, BookOpen, Play, GraduationCap } from 'lucide-react';
+import { Sparkles, LayoutDashboard, Star, LogOut, ChevronDown, Menu, X, Sun, Moon, BarChart2, Bell, Mail, BookOpen, Play, GraduationCap, UserCog, ShieldCheck } from 'lucide-react';
 import api from '../services/api';
 
 const navLinks = [
@@ -185,9 +185,13 @@ export default function Navbar() {
           <div ref={dropdownRef} className="relative hidden md:block">
             <button onClick={() => setDropdownOpen((v) => !v)}
               className={`flex items-center gap-2 px-3 py-2 rounded-xl transition-colors ${isDark ? 'hover:bg-white/8' : 'hover:bg-black/6'}`}>
-              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                {initials}
-              </div>
+              {user?.avatar ? (
+                <img src={user.avatar} alt="" className="w-7 h-7 rounded-lg object-cover flex-shrink-0" />
+              ) : (
+                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                  {initials}
+                </div>
+              )}
               <span className={`text-sm font-medium max-w-[80px] truncate ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
                 {user?.name?.split(' ')[0]}
               </span>
@@ -200,6 +204,17 @@ export default function Navbar() {
                   <p className={`text-sm font-semibold truncate ${isDark ? 'text-white' : 'text-slate-800'}`}>{user?.name}</p>
                   <p className="text-slate-500 text-xs truncate">{user?.email}</p>
                 </div>
+                <Link to="/profile" onClick={() => setDropdownOpen(false)}
+                  className={`w-full flex items-center gap-2 px-4 py-3 text-sm transition-colors ${isDark ? 'text-slate-300 hover:bg-white/8' : 'text-slate-600 hover:bg-black/5'}`}>
+                  <UserCog size={15} className="text-slate-500" /> Meu perfil
+                </Link>
+                {/* Só um atalho: esconder o item não é o que protege a área. */}
+                {user?.role === 'admin' && (
+                  <Link to="/admin" onClick={() => setDropdownOpen(false)}
+                    className={`w-full flex items-center gap-2 px-4 py-3 text-sm transition-colors ${isDark ? 'text-slate-300 hover:bg-white/8' : 'text-slate-600 hover:bg-black/5'}`}>
+                    <ShieldCheck size={15} className="text-blue-400" /> Administração
+                  </Link>
+                )}
                 <Link to="/contact" onClick={() => setDropdownOpen(false)}
                   className={`w-full flex items-center gap-2 px-4 py-3 text-sm transition-colors ${isDark ? 'text-slate-300 hover:bg-white/8' : 'text-slate-600 hover:bg-black/5'}`}>
                   <Mail size={15} className="text-slate-500" /> Contato / Suporte
@@ -248,6 +263,10 @@ export default function Navbar() {
           })}
 
           <div className={`border-t mt-1 pt-1 ${isDark ? 'border-white/8' : 'border-black/6'}`}>
+            <Link to="/profile" onClick={() => setMobileOpen(false)}
+              className={`w-full flex items-center gap-2.5 px-4 py-3 rounded-xl text-sm transition-colors ${isDark ? 'text-slate-300 hover:bg-white/8' : 'text-slate-600 hover:bg-black/5'}`}>
+              <UserCog size={16} className="text-slate-500" /> Meu perfil
+            </Link>
             <button onClick={toggle}
               className={`w-full flex items-center gap-2.5 px-4 py-3 rounded-xl text-sm transition-colors ${isDark ? 'text-yellow-300 hover:bg-yellow-400/10' : 'text-blue-500 hover:bg-blue-500/10'}`}>
               {isDark ? <Sun size={16} /> : <Moon size={16} />}

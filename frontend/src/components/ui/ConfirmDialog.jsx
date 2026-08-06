@@ -34,7 +34,7 @@ export default function ConfirmDialog({
 
   return (
     <Modal onClose={loading ? undefined : onCancel} size="sm" labelledBy={titleId} dismissable={!loading}>
-      <div className="p-8 text-center">
+      <div className="p-6 sm:p-8 text-center">
         <div className="text-4xl mb-4" aria-hidden="true">{emoji}</div>
 
         <h3 id={titleId} className={`font-bold text-lg mb-2 ${isDark ? 'text-white' : 'text-slate-800'}`}>
@@ -43,7 +43,10 @@ export default function ConfirmDialog({
 
         <p className="text-slate-500 text-sm mb-8 leading-relaxed">{children}</p>
 
-        <div className="flex gap-3">
+        {/* Empilha no mobile: dois rótulos longos lado a lado ficavam
+            espremidos em telas estreitas. Confirmar primeiro na coluna
+            invertida mantém Cancelar mais perto do polegar. */}
+        <div className="flex flex-col-reverse sm:flex-row gap-3">
           <Button ref={cancelRef} variant="secondary" size="lg" fullWidth
             onClick={onCancel} disabled={loading}>
             {cancelLabel}

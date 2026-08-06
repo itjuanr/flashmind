@@ -108,7 +108,7 @@ function SubjectModal({ onClose, onSaved, editing, toast, isDark }) {
           </div>
 
           {/* Rodapé fixo: ações sempre visíveis, sem precisar rolar */}
-          <div className={`flex justify-end gap-3 px-6 py-4 border-t flex-shrink-0 ${isDark ? 'border-white/8' : 'border-black/6'}`}>
+          <div className={`flex flex-col-reverse sm:flex-row sm:justify-end gap-3 px-4 sm:px-6 py-4 border-t flex-shrink-0 ${isDark ? 'border-white/8' : 'border-black/6'}`}>
             <Button type="button" variant="secondary" size="lg" onClick={onClose}>Cancelar</Button>
             <Button type="submit" variant="primary" size="lg" loading={loading}
               icon={loading ? undefined : editing?._id ? Check : Plus}>

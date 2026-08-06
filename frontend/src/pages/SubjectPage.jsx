@@ -181,7 +181,7 @@ function DeckModal({ onClose, onSaved, editing, toast, isDark }) {
           </div>
         </div>
 
-        <div className={`flex justify-end gap-3 px-6 py-4 border-t flex-shrink-0 ${isDark ? 'border-white/8' : 'border-black/6'}`}>
+        <div className={`flex flex-col-reverse sm:flex-row sm:justify-end gap-3 px-4 sm:px-6 py-4 border-t flex-shrink-0 ${isDark ? 'border-white/8' : 'border-black/6'}`}>
           <Button type="button" variant="secondary" size="lg" onClick={onClose}>Cancelar</Button>
           <Button type="submit" variant="primary" size="lg" loading={loading}
             icon={loading ? undefined : editing?._id ? Check : Plus}>
@@ -372,10 +372,11 @@ export default function SubjectPage() {
           <ChevronLeft size={16} className="group-hover:-translate-x-0.5 transition-transform"/> Caderno
         </button>
 
-        {/* Header */}
-        <div className="flex items-start justify-between gap-4 mb-8">
-          <div className="flex items-start gap-4 min-w-0 flex-1">
-            <span className="text-5xl flex-shrink-0">{subject?.emoji || '📓'}</span>
+        {/* Header — empilha no mobile. Em linha, os 3 botões nao-encolhiveis
+            espremiam o titulo ate a largura zero e ele quebrava letra a letra. */}
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-8">
+          <div className="flex items-start gap-3 sm:gap-4 min-w-0 flex-1">
+            <span className="text-4xl sm:text-5xl flex-shrink-0">{subject?.emoji || '📓'}</span>
             <div className="min-w-0">
               <h1 className={`text-2xl sm:text-3xl font-bold tracking-tight break-words ${isDark ? 'text-white' : 'text-slate-900'}`}>
                 {subject?.name || 'Matéria'}
@@ -396,7 +397,7 @@ export default function SubjectPage() {
               )}
             </div>
           </div>
-          <div className="flex items-center gap-2 self-start flex-nowrap flex-shrink-0">
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap sm:flex-shrink-0 w-full sm:w-auto">
             {subjectId !== 'unassigned' && (
               <button
                 onClick={() => (shareToken ? setShowShareModal(true) : handleToggleShare())}

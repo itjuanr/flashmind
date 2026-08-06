@@ -28,6 +28,9 @@ const VerifyEmailPage    = lazy(() => import('./pages/VerifyEmailPage'));
 const VerifyPendingPage  = lazy(() => import('./pages/VerifyPendingPage'));
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
 const ResetPasswordPage  = lazy(() => import('./pages/ResetPasswordPage'));
+const ProfilePage        = lazy(() => import('./pages/ProfilePage'));
+const AdminPage          = lazy(() => import('./pages/AdminPage'));
+const ConfirmEmailChangePage = lazy(() => import('./pages/ConfirmEmailChangePage'));
 
 function PageFallback() {
   return (
@@ -52,6 +55,9 @@ export default function App() {
                 <Route path="/forgot-password"           element={<ForgotPasswordPage />} />
                 <Route path="/reset-password/:token"     element={<ResetPasswordPage />} />
                 <Route path="/verify-email/:token"       element={<VerifyEmailPage />} />
+                {/* Pública: o link chega por e-mail e pode ser aberto em outro
+                    navegador, sem sessão ativa. */}
+                <Route path="/confirm-email-change/:token" element={<ConfirmEmailChangePage />} />
                 {/* Estática antes da dinâmica: /share/subject/:token não pode
                     ser lido como um token de deck chamado "subject". */}
                 <Route path="/share/subject/:token"      element={<SharedSubjectPage />} />
@@ -74,6 +80,11 @@ export default function App() {
                 <Route path="/study/custom"  element={<PrivateRoute><StudyPage /></PrivateRoute>} />
                 <Route path="/favorites"  element={<PrivateRoute><FavoritesPage /></PrivateRoute>} />
                 <Route path="/stats"      element={<PrivateRoute><StatsPage /></PrivateRoute>} />
+                <Route path="/profile"    element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
+                {/* Rota comum de propósito: o bundle é público e esconder o
+                    caminho não protege. Quem não é admin recebe 404 da API e
+                    não vê dado nenhum — a barreira está no servidor. */}
+                <Route path="/admin"      element={<PrivateRoute><AdminPage /></PrivateRoute>} />
                 <Route path="/notebook"   element={<PrivateRoute><NotebookPage /></PrivateRoute>} />
                 <Route path="/notebook/:subjectId"
                   element={<PrivateRoute><SubjectPage /></PrivateRoute>} />

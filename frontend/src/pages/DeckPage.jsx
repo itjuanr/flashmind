@@ -227,7 +227,7 @@ function CardModal({ onClose, onSaved, deckId, editing, toast, isDark }) {
         </div>
 
         {/* Rodapé fixo */}
-        <div className={`flex justify-end gap-3 px-6 py-4 border-t flex-shrink-0 ${isDark ? 'border-white/8' : 'border-black/6'}`}>
+        <div className={`flex flex-col-reverse sm:flex-row sm:justify-end gap-3 px-4 sm:px-6 py-4 border-t flex-shrink-0 ${isDark ? 'border-white/8' : 'border-black/6'}`}>
           <Button type="button" variant="secondary" size="lg" onClick={onClose}>Cancelar</Button>
           <Button type="submit" variant="primary" size="lg" loading={loading} icon={loading ? undefined : Plus}>
             {loading ? 'Salvando...' : editing ? 'Salvar alterações' : 'Adicionar card'}
@@ -744,20 +744,20 @@ export default function DeckPage() {
           <>
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-8">
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3 sm:gap-4 min-w-0">
                 {deck?.deckImage
                   ? <img src={deck.deckImage} alt={deck.name} className="w-14 h-14 rounded-2xl object-cover flex-shrink-0" />
-                  : <span className="text-4xl">{deck?.emoji || '📚'}</span>
+                  : <span className="text-4xl flex-shrink-0">{deck?.emoji || '📚'}</span>
                 }
-                <div>
-                  <h1 className="text-3xl font-bold text-white tracking-tight">{deck?.name}</h1>
+                <div className="min-w-0">
+                  <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight break-words">{deck?.name}</h1>
                   {deck?.description && <p className="text-slate-500 text-sm mt-1">{deck.description}</p>}
                   <div className="flex items-center gap-2 mt-1.5">
                     <p className="text-slate-600 text-xs">{cards.length} cards</p>
                     {deck?.subjectId && (
                       <>
                         <span className="text-slate-700">·</span>
-                        <Link to={`/notebook/subject/${deck.subjectId._id}`} className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-blue-400 transition-colors">
+                        <Link to={`/notebook/${deck.subjectId._id}`} className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-blue-400 transition-colors">
                           <Folder size={12} />
                           <span>{deck.subjectId.name}</span>
                         </Link>

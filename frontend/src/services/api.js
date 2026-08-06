@@ -27,7 +27,7 @@ api.interceptors.response.use(
       
       const path = window.location.pathname;
       const publicRoutes = ['/', '/login', '/register', '/forgot-password', '/contact'];
-      const isPublicDynamicRoute = path.startsWith('/reset-password/') || path.startsWith('/verify-email/') || path.startsWith('/share/');
+      const isPublicDynamicRoute = path.startsWith('/reset-password/') || path.startsWith('/verify-email/') || path.startsWith('/share/') || path.startsWith('/confirm-email-change/');
       
       if (!publicRoutes.includes(path) && !isPublicDynamicRoute) {
         window.location.href = '/login';

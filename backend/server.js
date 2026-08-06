@@ -13,6 +13,7 @@ const flashcardRoutes = require('./src/routes/flashcards');
 const studyRoutes     = require('./src/routes/study');
 const searchRoutes    = require('./src/routes/search');
 const notebookRoutes  = require('./src/routes/notebook');
+const adminRoutes     = require('./src/routes/admin');
 
 connectDB();
 
@@ -108,6 +109,10 @@ app.use('/api/auth/login',               authLimiter);
 app.use('/api/auth/register',            authLimiter);
 app.use('/api/auth/forgot-password',     emailLimiter);
 app.use('/api/auth/resend-verification', emailLimiter);
+// Ambas recebem a senha atual no corpo — sem limite, viram alvo de força bruta
+// para quem já tem uma sessão. change-email também dispara envio de e-mail.
+app.use('/api/auth/change-password',     authLimiter);
+app.use('/api/auth/change-email',        emailLimiter);
 
 // ── Health check ──────────────────────────────────────────────────────────────
 app.get('/api/health', (_, res) => res.json({ status: 'ok', ts: new Date() }));
@@ -119,6 +124,7 @@ app.use('/api/flashcards', flashcardRoutes);
 app.use('/api/study',      studyRoutes);
 app.use('/api/search',     searchRoutes);
 app.use('/api/notebook',   notebookRoutes);
+app.use('/api/admin',      adminRoutes);
 
 // ── Error handler ─────────────────────────────────────────────────────────────
 app.use((err, req, res, next) => {
