@@ -272,6 +272,7 @@ export default function SubjectPage() {
   const [studyingSubject, setStudyingSubject] = useState(false);
   const [showDeckModal, setShowDeckModal] = useState(false);
   const [editingDeck, setEditingDeck] = useState(null);
+  const [totalFlashcards, setTotalFlashcards] = useState(0);
 
   const query = new URLSearchParams(location.search);
   const [activeTab, setActiveTab] = useState(query.get('tab') || 'decks');
@@ -285,6 +286,8 @@ export default function SubjectPage() {
           setActiveTab('decks');
           const dRes = await api.get(`/decks/subject/unassigned`);
           setDecks(dRes.data);
+          const calculatedTotalFlashcards = dRes.data.reduce((sum, deck) => sum + (deck.flashcardCount || 0), 0);
+          setTotalFlashcards(calculatedTotalFlashcards);
         } else {
           const [sRes, nRes, dRes] = await Promise.all([
             api.get(`/notebook/subjects/${subjectId}`),
@@ -294,6 +297,8 @@ export default function SubjectPage() {
           setSubject(sRes.data);
           setNotes(nRes.data);
           setDecks(dRes.data);
+          const calculatedTotalFlashcards = dRes.data.reduce((sum, deck) => sum + (deck.flashcardCount || 0), 0);
+          setTotalFlashcards(calculatedTotalFlashcards);
         }
       } catch { toast('Erro ao carregar.', 'error'); }
       finally { setLoading(false); }
@@ -337,8 +342,10 @@ export default function SubjectPage() {
     // Após criar ou editar um deck, o ideal é recarregar a lista de decks
     // para garantir que todos os dados (contagens, etc.) estejam atualizados.
     try {
-      const dRes = await api.get(`/decks/subject/${subjectId}`);
+      const dRes = await api.get(`/notebook/subjects/${subjectId}/decks`); // Rota corrigida
       setDecks(dRes.data);
+      const calculatedTotalFlashcards = dRes.data.reduce((sum, deck) => sum + (deck.flashcardCount || 0), 0);
+      setTotalFlashcards(calculatedTotalFlashcards);
     } catch {
       toast('Erro ao atualizar a lista de decks.', 'error');
     }
@@ -400,6 +407,12 @@ export default function SubjectPage() {
               )}
               {subject?.description && (
                 <p className="text-slate-500 text-sm mt-2">{subject.description}</p>
+              )}
+              {totalFlashcards > 0 && (
+                <p className="text-slate-500 text-sm mt-2 flex items-center gap-1.5">
+                  <Book size={14} className="text-blue-400" />
+                  <span className="font-medium text-white">{totalFlashcards}</span> flashcard{totalFlashcards !== 1 ? 's' : ''}
+                </p>
               )}
             </div>
           </div>
