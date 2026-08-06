@@ -2,6 +2,9 @@ import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import Navbar from '../components/Navbar';
+import ConfirmDialog from '../components/ui/ConfirmDialog';
+import Modal from '../components/ui/Modal';
+import Button from '../components/ui/Button';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { useTheme } from '../context/ThemeContext';
@@ -180,18 +183,17 @@ function DeckModal({ onClose, onSaved, editing, toast }) {
     }
   };
 
-  const surface = isDark ? 'bg-[#0F0F18]' : 'bg-white';
-  const inputCls = `w-full border px-4 py-3 rounded-xl outline-none transition-all text-sm ${
+  const inputCls = `w-full border px-4 py-3 rounded-lg outline-none transition-all text-sm ${
     isDark 
       ? 'bg-white/4 border-white/8 focus:border-blue-500/50 text-white placeholder-slate-600'
       : 'bg-black/3 border-black/8 focus:border-blue-500/50 text-slate-800 placeholder-slate-400'
   }`;
 
   return (
-    <div className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
-      <div className={`w-full max-w-md ${surface} rounded-3xl border ${isDark ? 'border-white/10' : 'border-black/8'} flex flex-col`} style={{ maxHeight: '90vh' }}>
+    <Modal onClose={onClose} size="3xl">
+      <div className="flex flex-col" style={{ maxHeight: '88vh' }}>
         {/* Header fixo */}
-        <div className={`flex items-center justify-between px-8 pt-7 pb-4 border-b ${isDark ? 'border-white/8' : 'border-black/6'} flex-shrink-0`}>
+        <div className={`flex items-center justify-between px-6 pt-6 pb-4 border-b ${isDark ? 'border-white/8' : 'border-black/6'} flex-shrink-0`}>
           <div>
             <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>
               {editing ? 'Editar deck' : 'Novo deck'}
@@ -202,12 +204,13 @@ function DeckModal({ onClose, onSaved, editing, toast }) {
           </div>
           <button onClick={onClose} className="text-slate-500 hover:text-slate-300 transition-colors flex-shrink-0"><X size={20} /></button>
         </div>
-        {/* Corpo com scroll interno */}
-        <div className="overflow-y-auto flex-1 px-8 py-6">
-          {error && <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm px-4 py-3 rounded-xl mb-5">{error}</div>}
-          <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="flex flex-col min-h-0 flex-1">
+        {/* Corpo com scroll interno — grade de 2 colunas deixa o modal horizontal */}
+        <div className="overflow-y-auto flex-1 px-6 py-5">
+          {error && <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm px-4 py-3 rounded-lg mb-5">{error}</div>}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
           {/* Ícone */}
-          <div>
+          <div className="md:col-span-2">
             <div className="flex items-center justify-between mb-3">
               <label className="text-xs font-semibold text-slate-500 uppercase tracking-widest">Ícone</label>
               <div className="flex gap-1">
@@ -260,14 +263,14 @@ function DeckModal({ onClose, onSaved, editing, toast }) {
           </div>
 
           {/* Nome */}
-          <div>
+          <div className="md:col-span-1">
             <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">Nome *</label>
             <input type="text" required placeholder="Ex: Biologia Celular" className={inputCls}
               value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           </div>
 
           {/* Descrição */}
-          <div>
+          <div className="md:col-span-1">
             <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">Descrição (opcional)</label>
             <textarea placeholder="Sobre o que é esse deck?" rows={2} className={`${inputCls} resize-none`}
               value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
@@ -275,7 +278,7 @@ function DeckModal({ onClose, onSaved, editing, toast }) {
 
           {/* Matéria */}
           {subjects.length > 0 && (
-            <div>
+            <div className="md:col-span-1">
               <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">Matéria (opcional)</label>
               <SearchableSelect
                 isDark={isDark}
@@ -292,7 +295,7 @@ function DeckModal({ onClose, onSaved, editing, toast }) {
           )}
 
           {/* Tags */}
-          <div>
+          <div className="md:col-span-1">
             <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">Tags (máx 5)</label>
             <div className="flex gap-2 mb-2 flex-wrap">
               {form.tags.map((t) => (
@@ -316,9 +319,9 @@ function DeckModal({ onClose, onSaved, editing, toast }) {
           </div>
 
           {/* Cor */}
-          <div>
+          <div className="md:col-span-1">
             <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-3">Cor</label>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               {colors.map((c) => (
                 <button key={c} type="button" onClick={() => setForm({ ...form, color: c })}
                   style={{ backgroundColor: c }}
@@ -330,7 +333,7 @@ function DeckModal({ onClose, onSaved, editing, toast }) {
           </div>
 
           {/* Configurações de revisão */}
-          <div className={`rounded-2xl border px-4 py-3 ${isDark ? 'border-white/8' : 'border-black/6'}`}>
+          <div className={`md:col-span-1 self-end rounded-lg border px-4 py-3 ${isDark ? 'border-white/8' : 'border-black/6'}`}>
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-2.5">
                 <Bell size={14} className={form.reviewSettings.notify ? 'text-blue-400' : 'text-slate-600'} />
@@ -359,14 +362,20 @@ function DeckModal({ onClose, onSaved, editing, toast }) {
             </div>
           </div>
 
-          <button type="submit" disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white font-semibold py-3.5 rounded-xl transition-all flex items-center justify-center gap-2">
-            {loading ? <><Loader2 size={17} className="animate-spin" /> Salvando...</> : editing ? <><Check size={17} /> Salvar alterações</> : <><Plus size={17} /> Criar deck</>}
-          </button>
-        </form>
+          </div>
         </div>
+
+        {/* Rodapé fixo — ações sempre visíveis */}
+        <div className={`flex justify-end gap-3 px-6 py-4 border-t flex-shrink-0 ${isDark ? 'border-white/8' : 'border-black/6'}`}>
+          <Button type="button" variant="secondary" size="lg" onClick={onClose}>Cancelar</Button>
+          <Button type="submit" variant="primary" size="lg" loading={loading}
+            icon={loading ? undefined : editing ? Check : Plus}>
+            {loading ? 'Salvando...' : editing ? 'Salvar alterações' : 'Criar deck'}
+          </Button>
+        </div>
+        </form>
       </div>
-    </div>
+    </Modal>
   );
 }
 
@@ -669,40 +678,32 @@ export default function Dashboard() {
 
       {/* Modal confirmar reset */}
       {confirmReset && (
-        <div className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
-          <div className={`w-full max-w-sm rounded-3xl border p-8 text-center ${isDark ? 'bg-[#0F0F18] border-white/10' : 'bg-white border-black/8 shadow-2xl'}`}>
-            <div className="text-4xl mb-4">🔄</div>
-            <h3 className={`font-bold text-lg mb-2 ${isDark ? 'text-white' : 'text-slate-800'}`}>Resetar histórico?</h3>
-            <p className="text-slate-500 text-sm mb-8">A taxa de acerto e os dados de estudo serão apagados permanentemente. Os seus decks e flashcards continuam intactos.</p>
-            <div className="flex gap-3">
-              <button onClick={() => setConfirmReset(false)} disabled={resetting}
-                className={`flex-1 border font-semibold py-3 rounded-xl transition-all text-sm disabled:opacity-50 ${isDark ? 'bg-white/5 hover:bg-white/10 border-white/8 text-slate-300' : 'bg-black/3 hover:bg-black/6 border-black/8 text-slate-600'}`}>Cancelar</button>
-              <button onClick={handleReset} disabled={resetting}
-                className={`flex-1 bg-red-500/15 hover:bg-red-500/25 border border-red-500/25 font-semibold py-3 rounded-xl transition-all text-sm disabled:opacity-60 flex items-center justify-center gap-2 ${isDark ? 'text-red-400' : 'text-red-600'}`}>
-                {resetting ? <><Loader2 size={15} className="animate-spin" /> Resetando...</> : 'Resetar'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <ConfirmDialog
+          emoji="🔄"
+          title="Resetar histórico?"
+          confirmLabel="Resetar"
+          loadingLabel="Resetando..."
+          loading={resetting}
+          onCancel={() => setConfirmReset(false)}
+          onConfirm={handleReset}
+        >
+          A taxa de acerto e os dados de estudo serão apagados permanentemente. Os seus decks e flashcards continuam intactos.
+        </ConfirmDialog>
       )}
 
       {/* Modal confirmar exclusão */}
       {confirmDelete && (
-        <div className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
-          <div className={`w-full max-w-sm rounded-3xl border p-8 text-center ${isDark ? 'bg-[#0F0F18] border-white/10' : 'bg-white border-black/8 shadow-2xl'}`}>
-            <div className="text-4xl mb-4">🗑️</div>
-            <h3 className={`font-bold text-lg mb-2 ${isDark ? 'text-white' : 'text-slate-800'}`}>Excluir deck?</h3>
-            <p className="text-slate-500 text-sm mb-8">O deck <span className={`font-medium ${isDark ? 'text-white' : 'text-slate-800'}`}>"{confirmDelete.name}"</span> e todos os seus flashcards serão removidos permanentemente.</p>
-            <div className="flex gap-3">
-              <button onClick={() => setConfirmDelete(null)} disabled={deleting}
-                className={`flex-1 border font-semibold py-3 rounded-xl transition-all text-sm disabled:opacity-50 ${isDark ? 'bg-white/5 hover:bg-white/10 border-white/8 text-slate-300' : 'bg-black/3 hover:bg-black/6 border-black/8 text-slate-600'}`}>Cancelar</button>
-              <button onClick={handleDelete} disabled={deleting}
-                className={`flex-1 bg-red-500/15 hover:bg-red-500/25 border border-red-500/25 font-semibold py-3 rounded-xl transition-all text-sm disabled:opacity-60 flex items-center justify-center gap-2 ${isDark ? 'text-red-400' : 'text-red-600'}`}>
-                {deleting ? <><Loader2 size={15} className="animate-spin" /> Excluindo...</> : 'Excluir'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <ConfirmDialog
+          emoji="🗑️"
+          title="Excluir deck?"
+          confirmLabel="Excluir"
+          loadingLabel="Excluindo..."
+          loading={deleting}
+          onCancel={() => setConfirmDelete(null)}
+          onConfirm={handleDelete}
+        >
+          O deck <span className={`font-medium ${isDark ? 'text-white' : 'text-slate-800'}`}>"{confirmDelete.name}"</span> e todos os seus flashcards serão removidos permanentemente.
+        </ConfirmDialog>
       )}
 
       <main className="max-w-6xl mx-auto px-6 pt-28 pb-16 relative z-10">

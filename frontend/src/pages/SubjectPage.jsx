@@ -10,6 +10,9 @@ import {
   Image, Check, Bell, Pencil,
 } from 'lucide-react';
 import api from '../services/api';
+import ConfirmDialog from '../components/ui/ConfirmDialog';
+import Modal from '../components/ui/Modal';
+import Button from '../components/ui/Button';
 
 // ─── Modal: Criar / Editar Deck (Versão Completa) ─────────────────────────────
 function DeckModal({ onClose, onSaved, editing, toast, isDark }) {
@@ -78,27 +81,27 @@ function DeckModal({ onClose, onSaved, editing, toast, isDark }) {
     }
   };
 
-  const surface = isDark ? 'bg-[#0F0F18]' : 'bg-white';
-  const inputCls = `w-full border px-4 py-3 rounded-xl outline-none transition-all text-sm ${
+  const inputCls = `w-full border px-4 py-3 rounded-lg outline-none transition-all text-sm ${
     isDark 
       ? 'bg-white/4 border-white/8 focus:border-blue-500/50 text-white placeholder-slate-600'
       : 'bg-black/3 border-black/8 focus:border-blue-500/50 text-slate-800 placeholder-slate-400'
   }`;
 
   return (
-    <div className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
-      <div className={`w-full max-w-md ${surface} rounded-3xl border ${isDark ? 'border-white/10' : 'border-black/8'} flex flex-col`} style={{ maxHeight: '90vh' }}>
-        <div className={`flex items-center justify-between px-8 pt-7 pb-4 border-b ${isDark ? 'border-white/8' : 'border-black/6'} flex-shrink-0`}>
+    <Modal onClose={onClose} size="3xl">
+      <div className="flex flex-col" style={{ maxHeight: '88vh' }}>
+        <div className={`flex items-center justify-between px-6 pt-6 pb-4 border-b ${isDark ? 'border-white/8' : 'border-black/6'} flex-shrink-0`}>
           <div>
             <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>{editing?._id ? 'Editar deck' : 'Novo deck'}</h2>
             <p className="text-slate-500 text-sm mt-0.5">{editing?._id ? 'Atualize as informações.' : 'Crie um novo deck para esta matéria.'}</p>
           </div>
-          <button onClick={onClose} className="text-slate-500 hover:text-slate-300 transition-colors flex-shrink-0"><X size={20} /></button>
+          <button type="button" onClick={onClose} aria-label="Fechar" className="text-slate-500 hover:text-slate-300 transition-colors flex-shrink-0"><X size={20} /></button>
         </div>
-        <div className="overflow-y-auto flex-1 px-8 py-6">
-          {error && <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm px-4 py-3 rounded-xl mb-5">{error}</div>}
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
+        <form onSubmit={handleSubmit} className="flex flex-col min-h-0 flex-1">
+        <div className="overflow-y-auto flex-1 px-6 py-5">
+          {error && <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm px-4 py-3 rounded-lg mb-5">{error}</div>}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+            <div className="md:col-span-2">
               <div className="flex items-center justify-between mb-3">
                 <label className="text-xs font-semibold text-slate-500 uppercase tracking-widest">Ícone</label>
                 <div className="flex gap-1">
@@ -139,16 +142,16 @@ function DeckModal({ onClose, onSaved, editing, toast, isDark }) {
                 </div>
               )}
             </div>
-            <div>
+            <div className="md:col-span-1">
               <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">Nome *</label>
               <input type="text" required placeholder="Ex: Biologia Celular" className={inputCls} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
             </div>
-            <div>
+            <div className="md:col-span-1">
               <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">Descrição (opcional)</label>
               <textarea placeholder="Sobre o que é esse deck?" rows={2} className={`${inputCls} resize-none`} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
             </div>
             {subjects.length > 0 && (
-              <div>
+              <div className="md:col-span-1">
                 <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">Matéria (opcional)</label>
                 <SearchableSelect
                   isDark={isDark}
@@ -163,24 +166,31 @@ function DeckModal({ onClose, onSaved, editing, toast, isDark }) {
                 />
               </div>
             )}
-            <div>
+            <div className="md:col-span-1">
               <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-3">Cor</label>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 {colors.map((c) => (
                   <button key={c} type="button" onClick={() => setForm({ ...form, color: c })} style={{ backgroundColor: c }}
+                    aria-label={`Cor ${c}`}
                     className={`w-8 h-8 rounded-lg transition-all flex items-center justify-center ${form.color === c ? 'ring-2 ring-white/50 scale-110' : 'opacity-50 hover:opacity-90'}`}>
                     {form.color === c && <Check size={14} className="text-white" />}
                   </button>
                 ))}
               </div>
             </div>
-            <button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white font-semibold py-3.5 rounded-xl transition-all flex items-center justify-center gap-2">
-              {loading ? <><Loader2 size={17} className="animate-spin" /> Salvando...</> : editing?._id ? <><Check size={17} /> Salvar alterações</> : <><Plus size={17} /> Criar deck</>}
-            </button>
-          </form>
+          </div>
         </div>
+
+        <div className={`flex justify-end gap-3 px-6 py-4 border-t flex-shrink-0 ${isDark ? 'border-white/8' : 'border-black/6'}`}>
+          <Button type="button" variant="secondary" size="lg" onClick={onClose}>Cancelar</Button>
+          <Button type="submit" variant="primary" size="lg" loading={loading}
+            icon={loading ? undefined : editing?._id ? Check : Plus}>
+            {loading ? 'Salvando...' : editing?._id ? 'Salvar alterações' : 'Criar deck'}
+          </Button>
+        </div>
+        </form>
       </div>
-    </div>
+    </Modal>
   );
 }
 
@@ -517,25 +527,14 @@ export default function SubjectPage() {
       )}
 
       {confirmDelete && (
-        <div className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
-          <div className={`w-full max-w-sm rounded-3xl border p-8 text-center ${isDark ? 'bg-[#0F0F18] border-white/10' : 'bg-white border-black/8'}`}>
-            <div className="text-4xl mb-4">⚠️</div>
-            <h3 className={`font-bold text-lg mb-2 ${isDark ? 'text-white' : 'text-slate-800'}`}>Excluir aula?</h3>
-            <p className="text-slate-500 text-sm mb-6">
-              "<span className={`font-semibold ${isDark ? 'text-white' : 'text-slate-800'}`}>{confirmDelete.title}</span>" e todos os seus anexos serão removidos.
-            </p>
-            <div className="flex gap-3">
-              <button onClick={() => setConfirmDelete(null)}
-                className={`flex-1 py-3 rounded-xl font-semibold text-sm border transition-all ${isDark ? 'border-white/8 text-slate-400 hover:bg-white/5' : 'border-black/8 text-slate-500'}`}>
-                Cancelar
-              </button>
-              <button onClick={handleDelete}
-                className="flex-1 py-3 rounded-xl font-semibold text-sm bg-red-500 hover:bg-red-400 text-white transition-all">
-                Excluir
-              </button>
-            </div>
-          </div>
-        </div>
+        <ConfirmDialog
+          title="Excluir aula?"
+          confirmLabel="Excluir"
+          onCancel={() => setConfirmDelete(null)}
+          onConfirm={handleDelete}
+        >
+          "<span className={`font-semibold ${isDark ? 'text-white' : 'text-slate-800'}`}>{confirmDelete.title}</span>" e todos os seus anexos serão removidos.
+        </ConfirmDialog>
       )}
     </div>
   );

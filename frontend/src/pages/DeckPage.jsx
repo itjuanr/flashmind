@@ -3,6 +3,9 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import api from '../services/api';
 import Navbar from '../components/Navbar';
 import FlashCard from '../components/FlashCard';
+import ConfirmDialog from '../components/ui/ConfirmDialog';
+import Modal from '../components/ui/Modal';
+import Button from '../components/ui/Button';
 import { useToast } from '../context/ToastContext';
 import { useTheme } from '../context/ThemeContext';
 import {
@@ -152,22 +155,23 @@ function CardModal({ onClose, onSaved, deckId, editing, toast, isDark }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-lg bg-[#0F0F18] rounded-3xl border border-white/10 flex flex-col" style={{ maxHeight: '90vh' }}>
+    <Modal onClose={onClose} size="4xl">
+      <div className="flex flex-col" style={{ maxHeight: '88vh' }}>
         {/* Header fixo */}
-        <div className="flex items-center justify-between px-8 pt-7 pb-4 border-b border-white/8 flex-shrink-0">
+        <div className={`flex items-center justify-between px-6 pt-6 pb-4 border-b flex-shrink-0 ${isDark ? 'border-white/8' : 'border-black/6'}`}>
           <div>
-            <h2 className="text-xl font-bold text-white">{editing ? 'Editar card' : 'Novo flashcard'}</h2>
+            <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>{editing ? 'Editar card' : 'Novo flashcard'}</h2>
             <p className="text-slate-500 text-sm mt-0.5">{editing ? 'Atualize o conteúdo do card.' : 'Adicione texto e/ou imagem em cada lado.'}</p>
           </div>
-          <button onClick={onClose} className="text-slate-500 hover:text-white transition-colors flex-shrink-0"><X size={20} /></button>
+          <button type="button" onClick={onClose} aria-label="Fechar" className="text-slate-500 hover:text-white transition-colors flex-shrink-0"><X size={20} /></button>
         </div>
-        {/* Corpo com scroll interno */}
-        <div className="overflow-y-auto flex-1 px-8 py-6">
-          {error && <div className="animate-fade-in-down bg-red-500/10 border border-red-500/20 text-red-400 text-sm px-4 py-3 rounded-xl mb-5">{error}</div>}
-          <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="flex flex-col min-h-0 flex-1">
+        {/* Corpo com scroll interno — Frente e Verso lado a lado */}
+        <div className="overflow-y-auto flex-1 px-6 py-5">
+          {error && <div className="animate-fade-in-down bg-red-500/10 border border-red-500/20 text-red-400 text-sm px-4 py-3 rounded-lg mb-5">{error}</div>}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {/* Frente */}
-          <div className="space-y-3 p-4 rounded-2xl border border-white/6 bg-white/2">
+          <div className="space-y-3 p-4 rounded-lg border border-white/6 bg-white/2">
             <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Frente</p>
             <div>
               <div className="flex items-center justify-between mb-2">
@@ -185,7 +189,7 @@ function CardModal({ onClose, onSaved, deckId, editing, toast, isDark }) {
           </div>
 
           {/* Verso */}
-          <div className="space-y-3 p-4 rounded-2xl border border-blue-500/10 bg-blue-500/2">
+          <div className="space-y-3 p-4 rounded-lg border border-blue-500/10 bg-blue-500/2">
             <p className="text-xs font-bold text-blue-500/50 uppercase tracking-widest">Verso</p>
             <div>
               <div className="flex items-center justify-between mb-2">
@@ -203,7 +207,7 @@ function CardModal({ onClose, onSaved, deckId, editing, toast, isDark }) {
           </div>
 
           {/* Anotações */}
-          <div>
+          <div className="md:col-span-2">
             <button type="button" onClick={() => setShowNotes((v) => !v)}
               className="flex items-center gap-2 text-xs text-slate-500 hover:text-slate-300 transition-colors mb-2">
               <span className={`w-4 h-4 rounded border flex items-center justify-center transition-all text-[10px] ${showNotes ? 'bg-amber-500/20 border-amber-500/40 text-amber-400' : 'border-white/15'}`}>
@@ -219,14 +223,19 @@ function CardModal({ onClose, onSaved, deckId, editing, toast, isDark }) {
             )}
           </div>
 
-          <button type="submit" disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white font-semibold py-3.5 rounded-xl transition-all flex items-center justify-center gap-2">
-            {loading ? <><Loader2 size={17} className="animate-spin" /> Salvando...</> : <><Plus size={17} /> {editing ? 'Salvar alterações' : 'Adicionar card'}</>}
-          </button>
-        </form>
+          </div>
         </div>
+
+        {/* Rodapé fixo */}
+        <div className={`flex justify-end gap-3 px-6 py-4 border-t flex-shrink-0 ${isDark ? 'border-white/8' : 'border-black/6'}`}>
+          <Button type="button" variant="secondary" size="lg" onClick={onClose}>Cancelar</Button>
+          <Button type="submit" variant="primary" size="lg" loading={loading} icon={loading ? undefined : Plus}>
+            {loading ? 'Salvando...' : editing ? 'Salvar alterações' : 'Adicionar card'}
+          </Button>
+        </div>
+        </form>
       </div>
-    </div>
+    </Modal>
   );
 }
 
@@ -686,39 +695,26 @@ export default function DeckPage() {
       )}
 
       {confirmDeleteDeck && (
-        <div className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
-          <div className={`w-full max-w-sm rounded-3xl border p-8 text-center ${isDark ? 'bg-[#0F0F18] border-white/10' : 'bg-white border-black/8 shadow-2xl'}`}>
-            <div className="text-4xl mb-4">⚠️</div>
-            <h3 className={`font-bold text-lg mb-2 ${isDark ? 'text-white' : 'text-slate-800'}`}>Excluir deck?</h3>
-            <p className="text-slate-500 text-sm mb-8">
-              O deck <span className={`font-medium ${isDark ? 'text-white' : 'text-slate-800'}`}>"{deck?.name}"</span> e todos os seus {cards.length} card{cards.length !== 1 ? 's' : ''} serão removidos permanentemente.
-            </p>
-            <div className="flex gap-3">
-              <button onClick={() => setConfirmDeleteDeck(false)}
-                className={`flex-1 border font-semibold py-3 rounded-xl transition-all text-sm ${isDark ? 'bg-white/5 hover:bg-white/10 border-white/8 text-slate-300' : 'bg-black/3 hover:bg-black/6 border-black/8 text-slate-600'}`}>Cancelar</button>
-              <button onClick={handleDeleteDeck}
-                className={`flex-1 bg-red-500/15 hover:bg-red-500/25 border border-red-500/25 font-semibold py-3 rounded-xl transition-all text-sm ${isDark ? 'text-red-400' : 'text-red-600'}`}>Excluir tudo</button>
-            </div>
-          </div>
-        </div>
+        <ConfirmDialog
+          title="Excluir deck?"
+          confirmLabel="Excluir tudo"
+          onCancel={() => setConfirmDeleteDeck(false)}
+          onConfirm={handleDeleteDeck}
+        >
+          O deck <span className={`font-medium ${isDark ? 'text-white' : 'text-slate-800'}`}>"{deck?.name}"</span> e todos os seus {cards.length} card{cards.length !== 1 ? 's' : ''} serão removidos permanentemente.
+        </ConfirmDialog>
       )}
 
       {confirmDeleteCard && (
-        <div className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
-          <div className={`w-full max-w-sm rounded-3xl border p-8 text-center ${isDark ? 'bg-[#0F0F18] border-white/10' : 'bg-white border-black/8 shadow-2xl'}`}>
-            <div className="text-4xl mb-4">🗑️</div>
-            <h3 className={`font-bold text-lg mb-2 ${isDark ? 'text-white' : 'text-slate-800'}`}>Excluir flashcard?</h3>
-            <p className="text-slate-500 text-sm mb-8">
-              O card <span className={`font-medium ${isDark ? 'text-white' : 'text-slate-800'}`}>"{confirmDeleteCard.front.length > 40 ? confirmDeleteCard.front.slice(0,40) + '...' : confirmDeleteCard.front}"</span> será removido permanentemente.
-            </p>
-            <div className="flex gap-3">
-              <button onClick={() => setConfirmDeleteCard(null)}
-                className={`flex-1 border font-semibold py-3 rounded-xl transition-all text-sm ${isDark ? 'bg-white/5 hover:bg-white/10 border-white/8 text-slate-300' : 'bg-black/3 hover:bg-black/6 border-black/8 text-slate-600'}`}>Cancelar</button>
-              <button onClick={handleDelete}
-                className={`flex-1 bg-red-500/15 hover:bg-red-500/25 border border-red-500/25 font-semibold py-3 rounded-xl transition-all text-sm ${isDark ? 'text-red-400' : 'text-red-600'}`}>Excluir</button>
-            </div>
-          </div>
-        </div>
+        <ConfirmDialog
+          emoji="🗑️"
+          title="Excluir flashcard?"
+          confirmLabel="Excluir"
+          onCancel={() => setConfirmDeleteCard(null)}
+          onConfirm={handleDelete}
+        >
+          O card <span className={`font-medium ${isDark ? 'text-white' : 'text-slate-800'}`}>"{confirmDeleteCard.front.length > 40 ? confirmDeleteCard.front.slice(0,40) + '...' : confirmDeleteCard.front}"</span> será removido permanentemente.
+        </ConfirmDialog>
       )}
 
       {/* Modal de Progresso da Exportação */}

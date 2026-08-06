@@ -1,9 +1,12 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { useToast } from '../context/ToastContext';
 import Navbar from '../components/Navbar';
 import SearchableSelect from '../hooks/SearchableSelect'; // Importar o componente
+import ConfirmDialog from '../components/ui/ConfirmDialog';
+import Modal from '../components/ui/Modal';
+import Button from '../components/ui/Button';
 import { Plus, Loader2, Folder, Search, LayoutGrid, List, Pencil, Trash2, X, Check } from 'lucide-react';
 import api from '../services/api';
 
@@ -40,67 +43,81 @@ function SubjectModal({ onClose, onSaved, editing, toast, isDark }) {
     }
   };
 
-  const surface = isDark ? 'bg-[#0F0F18]' : 'bg-white';
-  const inputCls = `w-full border px-4 py-3 rounded-xl outline-none transition-all text-sm ${
+  const inputCls = `w-full border px-4 py-3 rounded-lg outline-none transition-all text-sm ${
     isDark
       ? 'bg-white/4 border-white/8 focus:border-blue-500/50 text-white placeholder-slate-600'
       : 'bg-black/3 border-black/8 focus:border-blue-500/50 text-slate-800 placeholder-slate-400'
   }`;
 
   return (
-    <div className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
-      <div className={`w-full max-w-md ${surface} rounded-3xl border ${isDark ? 'border-white/10' : 'border-black/8'} flex flex-col`} style={{ maxHeight: '90vh' }}>
-        <div className={`flex items-center justify-between px-8 pt-7 pb-4 border-b ${isDark ? 'border-white/8' : 'border-black/6'} flex-shrink-0`}>
+    <Modal onClose={onClose} size="2xl">
+      <div className="flex flex-col" style={{ maxHeight: '88vh' }}>
+        <div className={`flex items-center justify-between px-6 pt-6 pb-4 border-b flex-shrink-0 ${isDark ? 'border-white/8' : 'border-black/6'}`}>
           <div>
             <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>{editing?._id ? 'Editar matéria' : 'Nova matéria'}</h2>
             <p className="text-slate-500 text-sm mt-0.5">{editing?._id ? 'Atualize as informações.' : 'Crie uma nova matéria para organizar seus estudos.'}</p>
           </div>
-          <button onClick={onClose} className="text-slate-500 hover:text-slate-300 transition-colors flex-shrink-0"><X size={20} /></button>
+          <button type="button" onClick={onClose} aria-label="Fechar" className="text-slate-500 hover:text-slate-300 transition-colors flex-shrink-0"><X size={20} /></button>
         </div>
-        <div className="overflow-y-auto flex-1 px-8 py-6">
-          {error && <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm px-4 py-3 rounded-xl mb-5">{error}</div>}
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">Nome *</label>
-              <input type="text" required placeholder="Ex: Biologia Celular" className={inputCls} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">Semestre (opcional)</label>
-              <input type="text" placeholder="Ex: 1º Semestre, 2024/1" className={inputCls} value={form.semester} onChange={(e) => setForm({ ...form, semester: e.target.value })} />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">Descrição (opcional)</label>
-              <textarea placeholder="Sobre o que é essa matéria?" rows={2} className={`${inputCls} resize-none`} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-3">Ícone</label>
-              <div className="flex gap-2 flex-wrap">
-                {emojis.map((em) => (
-                  <button key={em} type="button" onClick={() => setForm({ ...form, emoji: em })}
-                    className={`w-10 h-10 rounded-xl text-lg flex items-center justify-center transition-all ${form.emoji === em ? 'bg-blue-500/20 ring-2 ring-blue-500/50' : isDark ? 'bg-white/5 hover:bg-white/10' : 'bg-black/5 hover:bg-black/10'}`}>{em}</button>
-                ))}
-                <input type="text" maxLength="2" placeholder="+" value={emojis.includes(form.emoji) ? '' : form.emoji} onChange={(e) => setForm({ ...form, emoji: e.target.value })}
-                  className={`w-10 h-10 rounded-xl text-lg text-center outline-none transition-all ${!emojis.includes(form.emoji) && form.emoji ? 'bg-blue-500/20 ring-2 ring-blue-500/50 text-blue-400' : isDark ? 'bg-white/5 hover:bg-white/10 text-slate-300 placeholder-slate-500' : 'bg-black/5 hover:bg-black/10 text-slate-700 placeholder-slate-400'}`} />
+
+        <form onSubmit={handleSubmit} className="flex flex-col min-h-0 flex-1">
+          <div className="overflow-y-auto flex-1 px-6 py-5">
+            {error && <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm px-4 py-3 rounded-lg mb-5">{error}</div>}
+
+            {/* Duas colunas no desktop: o formulário deixa de ser uma coluna alta */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
+              <div className="sm:col-span-1">
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">Nome *</label>
+                <input type="text" required placeholder="Ex: Biologia Celular" className={inputCls} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+              </div>
+              <div className="sm:col-span-1">
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">Semestre (opcional)</label>
+                <input type="text" placeholder="Ex: 1º Semestre, 2024/1" className={inputCls} value={form.semester} onChange={(e) => setForm({ ...form, semester: e.target.value })} />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">Descrição (opcional)</label>
+                <textarea placeholder="Sobre o que é essa matéria?" rows={2} className={`${inputCls} resize-none`} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+              </div>
+
+              <div className="sm:col-span-1">
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-3">Ícone</label>
+                <div className="flex gap-2 flex-wrap">
+                  {emojis.map((em) => (
+                    <button key={em} type="button" onClick={() => setForm({ ...form, emoji: em })}
+                      className={`w-10 h-10 rounded-lg text-lg flex items-center justify-center transition-all ${form.emoji === em ? 'bg-blue-500/20 ring-2 ring-blue-500/50' : isDark ? 'bg-white/5 hover:bg-white/10' : 'bg-black/5 hover:bg-black/10'}`}>{em}</button>
+                  ))}
+                  <input type="text" maxLength="2" placeholder="+" value={emojis.includes(form.emoji) ? '' : form.emoji} onChange={(e) => setForm({ ...form, emoji: e.target.value })}
+                    className={`w-10 h-10 rounded-lg text-lg text-center outline-none transition-all ${!emojis.includes(form.emoji) && form.emoji ? 'bg-blue-500/20 ring-2 ring-blue-500/50 text-blue-400' : isDark ? 'bg-white/5 hover:bg-white/10 text-slate-300 placeholder-slate-500' : 'bg-black/5 hover:bg-black/10 text-slate-700 placeholder-slate-400'}`} />
+                </div>
+              </div>
+
+              <div className="sm:col-span-1">
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-3">Cor</label>
+                <div className="flex gap-2 flex-wrap">
+                  {colors.map((c) => (
+                    <button key={c} type="button" onClick={() => setForm({ ...form, color: c })} style={{ backgroundColor: c }}
+                      aria-label={`Cor ${c}`}
+                      className={`w-8 h-8 rounded-lg transition-all flex items-center justify-center ${form.color === c ? 'ring-2 ring-white/50 scale-110' : 'opacity-50 hover:opacity-90'}`}>
+                      {form.color === c && <Check size={14} className="text-white" />}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-3">Cor</label>
-              <div className="flex gap-2">
-                {colors.map((c) => (
-                  <button key={c} type="button" onClick={() => setForm({ ...form, color: c })} style={{ backgroundColor: c }}
-                    className={`w-8 h-8 rounded-lg transition-all flex items-center justify-center ${form.color === c ? 'ring-2 ring-white/50 scale-110' : 'opacity-50 hover:opacity-90'}`}>
-                    {form.color === c && <Check size={14} className="text-white" />}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white font-semibold py-3.5 rounded-xl transition-all flex items-center justify-center gap-2">
-              {loading ? <><Loader2 size={17} className="animate-spin" /> Salvando...</> : editing?._id ? <><Check size={17} /> Salvar alterações</> : <><Plus size={17} /> Criar matéria</>}
-            </button>
-          </form>
-        </div>
+          </div>
+
+          {/* Rodapé fixo: ações sempre visíveis, sem precisar rolar */}
+          <div className={`flex justify-end gap-3 px-6 py-4 border-t flex-shrink-0 ${isDark ? 'border-white/8' : 'border-black/6'}`}>
+            <Button type="button" variant="secondary" size="lg" onClick={onClose}>Cancelar</Button>
+            <Button type="submit" variant="primary" size="lg" loading={loading}
+              icon={loading ? undefined : editing?._id ? Check : Plus}>
+              {loading ? 'Salvando...' : editing?._id ? 'Salvar alterações' : 'Criar matéria'}
+            </Button>
+          </div>
+        </form>
       </div>
-    </div>
+    </Modal>
   );
 }
 
@@ -380,25 +397,14 @@ export default function NotebookPage() {
       )}
 
       {confirmDeleteSubject && (
-        <div className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
-          <div className={`w-full max-w-sm rounded-3xl border p-8 text-center ${isDark ? 'bg-[#0F0F18] border-white/10' : 'bg-white border-black/8'}`}>
-            <div className="text-4xl mb-4">⚠️</div>
-            <h3 className={`font-bold text-lg mb-2 ${isDark ? 'text-white' : 'text-slate-800'}`}>Excluir matéria?</h3>
-            <p className="text-slate-500 text-sm mb-6">
-              A matéria "<span className={`font-semibold ${isDark ? 'text-white' : 'text-slate-800'}`}>{confirmDeleteSubject.name}</span>" e todas as suas aulas e decks associados serão removidos.
-            </p>
-            <div className="flex gap-3">
-              <button onClick={() => setConfirmDeleteSubject(null)}
-                className={`flex-1 py-3 rounded-xl font-semibold text-sm border transition-all ${isDark ? 'border-white/8 text-slate-400 hover:bg-white/5' : 'border-black/8 text-slate-500'}`}>
-                Cancelar
-              </button>
-              <button onClick={handleDeleteSubject}
-                className="flex-1 py-3 rounded-xl font-semibold text-sm bg-red-500 hover:bg-red-400 text-white transition-all">
-                Excluir
-              </button>
-            </div>
-          </div>
-        </div>
+        <ConfirmDialog
+          title="Excluir matéria?"
+          confirmLabel="Excluir"
+          onCancel={() => setConfirmDeleteSubject(null)}
+          onConfirm={handleDeleteSubject}
+        >
+          A matéria "<span className={`font-semibold ${isDark ? 'text-white' : 'text-slate-800'}`}>{confirmDeleteSubject.name}</span>" e todas as suas aulas e decks associados serão removidos.
+        </ConfirmDialog>
       )}
     </div>
   );
