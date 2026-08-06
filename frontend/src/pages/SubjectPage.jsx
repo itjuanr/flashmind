@@ -284,7 +284,7 @@ export default function SubjectPage() {
         if (subjectId === 'unassigned') {
           setSubject({ name: 'Sem matéria', emoji: '🗂️', _id: 'unassigned' });
           setActiveTab('decks');
-          const dRes = await api.get(`/decks/subject/unassigned`);
+          const dRes = await api.get(`/notebook/subjects/unassigned/decks`);
           setDecks(dRes.data);
           const calculatedTotalFlashcards = dRes.data.reduce((sum, deck) => sum + (deck.flashcardCount || 0), 0);
           setTotalFlashcards(calculatedTotalFlashcards);
