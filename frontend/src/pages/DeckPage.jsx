@@ -426,7 +426,7 @@ export default function DeckPage() {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  };
+  });
 
   // Drag & drop reorder
   const handleDragStart = (e, id) => { setDragId(id); e.dataTransfer.effectAllowed = 'move'; };
