@@ -410,11 +410,11 @@ export default function SubjectPage() {
         </button>
 
         {/* Header */}
-        <div className="flex items-start justify-between mb-8">
-          <div className="flex items-start gap-4">
-            <span className="text-5xl">{subject?.emoji || '📓'}</span>
-            <div>
-              <h1 className={`text-3xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
+        <div className="flex items-start justify-between gap-4 mb-8">
+          <div className="flex items-start gap-4 min-w-0 flex-1">
+            <span className="text-5xl flex-shrink-0">{subject?.emoji || '📓'}</span>
+            <div className="min-w-0">
+              <h1 className={`text-2xl sm:text-3xl font-bold tracking-tight break-words ${isDark ? 'text-white' : 'text-slate-900'}`}>
                 {subject?.name || 'Matéria'}
               </h1>
               {subject?.semester && (
@@ -433,10 +433,10 @@ export default function SubjectPage() {
               )}
             </div>
           </div>
-          <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+          <div className="flex items-center gap-2 self-start flex-nowrap flex-shrink-0">
             {subjectId !== 'unassigned' && (
               <button onClick={handleStudySubject} disabled={studyingSubject}
-                className="flex items-center gap-2 bg-blue-600/10 hover:bg-blue-600/20 disabled:opacity-50 text-blue-400 font-semibold px-4 py-2.5 rounded-xl transition-all text-sm">
+                className="flex items-center gap-2 bg-blue-600/10 hover:bg-blue-600/20 disabled:opacity-50 text-blue-400 font-semibold px-4 py-2.5 rounded-xl transition-all text-sm whitespace-nowrap flex-shrink-0">
                 {studyingSubject
                   ? <Loader2 size={15} className="animate-spin" />
                   : <BookOpen size={15} />
@@ -446,14 +446,14 @@ export default function SubjectPage() {
             )}
             {activeTab === 'decks' && (
               <button onClick={() => setShowDeckModal(true)}
-                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white font-semibold px-4 py-2.5 rounded-xl text-sm transition-all shadow-[0_0_20px_rgba(37,99,235,0.2)] flex-shrink-0">
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white font-semibold px-4 py-2.5 rounded-xl text-sm transition-all shadow-[0_0_20px_rgba(37,99,235,0.2)] whitespace-nowrap flex-shrink-0">
                 <Plus size={15}/>
                 Criar Deck
               </button>
             )}
             {subjectId !== 'unassigned' && activeTab === 'notes' && (
               <button onClick={handleCreate} disabled={creating}
-                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white font-semibold px-4 py-2.5 rounded-xl text-sm transition-all shadow-[0_0_20px_rgba(37,99,235,0.2)] flex-shrink-0">
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white font-semibold px-4 py-2.5 rounded-xl text-sm transition-all shadow-[0_0_20px_rgba(37,99,235,0.2)] whitespace-nowrap flex-shrink-0">
                 {creating ? <Loader2 size={15} className="animate-spin"/> : <Plus size={15}/>}
                 Nova aula
               </button>
