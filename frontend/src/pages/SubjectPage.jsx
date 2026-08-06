@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
-import SearchableSelect from '../components/SearchableSelect'; // Importar o componente
+import SearchableSelect from '../hooks/SearchableSelect'; // Importar o componente
 import { useToast } from '../context/ToastContext';
 import Navbar from '../components/Navbar';
 import {
