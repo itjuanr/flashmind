@@ -4,7 +4,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useToast } from '../context/ToastContext';
 import Navbar from '../components/Navbar';
 import SearchableSelect from '../hooks/SearchableSelect'; // Importar o componente
-import { Plus, Loader2, Folder, Search, LayoutGrid, List, Pencil, Trash2, X } from 'lucide-react';
+import { Plus, Loader2, Folder, Search, LayoutGrid, List, Pencil, Trash2, X, Check } from 'lucide-react';
 import api from '../services/api';
 
 // ─── Modal: Criar / Editar Matéria ─────────────────────────────────────────────
@@ -267,49 +267,104 @@ export default function NotebookPage() {
             </button>
           </div>
         ) : (
-          <div className={layoutView === 'grid' ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" : "space-y-3"}>
-            {filteredSubjects.map(subject => (
-              <div key={subject._id}
-                className={`group relative flex items-center gap-4 p-4 rounded-2xl border cursor-pointer transition-all ${layoutView === 'grid' ? 'glass flex-col justify-between h-auto min-h-[10rem]' : 'hover:scale-[1.01]'} ${isDark ? 'border-white/5 hover:border-white/10' : 'border-black/6 hover:border-black/12 shadow-sm'}`}>
-                {layoutView === 'grid' && (
-                  <div className="absolute -top-8 -right-8 w-28 h-28 rounded-full opacity-10 blur-2xl group-hover:opacity-20 transition-opacity pointer-events-none" style={{ backgroundColor: subject.color || '#8B5CF6' }} />
-                )}
-                <div className="relative z-10 flex items-center gap-3 flex-1 min-w-0 w-full">
-                  <span className="text-2xl flex-shrink-0">{subject.emoji || '📚'}</span>
-                  <div className="min-w-0 flex-1">
-                    <h3 className={`font-semibold text-base leading-tight group-hover:text-blue-300 transition-colors truncate ${isDark ? 'text-white' : 'text-slate-800'}`}>{subject.name}</h3>
-                    {subject.description && <p className="text-slate-500 text-xs mt-0.5 line-clamp-1">{subject.description}</p>}
-                  </div>
-                  {/* Edit/Delete buttons */}
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-auto z-10">
-                    <button onClick={(e) => { e.stopPropagation(); setEditingSubject(subject); setShowSubjectModal(true); }}
-                      className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-white/10 transition-all">
-                      <Pencil size={14} />
-                    </button>
-                    <button onClick={(e) => { e.stopPropagation(); setConfirmDeleteSubject(subject); }}
-                      className="p-2 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all">
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </div>
-                <div className="relative z-10 flex items-center justify-between gap-2 w-full">
-                  <div className="flex-1 min-w-0">
-                    {subject.semester && (
-                      <span className={`text-xs font-semibold px-2.5 py-1 rounded-full inline-block ${isDark ? 'bg-white/8 text-slate-400' : 'bg-black/6 text-slate-500'}`}>
-                        {subject.semester}
-                      </span>
-                    )}
-                    {subject.noteCount > 0 && (
-                      <p className="text-slate-500 text-xs mt-1">{subject.noteCount} aula{subject.noteCount !== 1 ? 's' : ''}</p>
-                    )}
-                  </div>
-                  <button onClick={(e) => { e.stopPropagation(); navigate(`/notebook/${subject._id}`); }}
-                    className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg transition-all" style={{ backgroundColor: `${subject.color || '#3B82F6'}18`, color: subject.color || '#3B82F6' }}>
-                    <Folder size={12} fill="currentColor" /> Abrir
+          <div className={layoutView === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 gap-4' : 'space-y-3'}>
+            {filteredSubjects.map(subject => {
+              const accent = subject.color || '#3B82F6';
+              const open = () => navigate(`/notebook/${subject._id}`);
+
+              const actions = (
+                <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                  <button title="Editar matéria" onClick={(e) => { e.stopPropagation(); setEditingSubject(subject); setShowSubjectModal(true); }}
+                    className={`p-2 rounded-lg text-slate-500 transition-all ${isDark ? 'hover:text-white hover:bg-white/10' : 'hover:text-slate-800 hover:bg-black/6'}`}>
+                    <Pencil size={14} />
+                  </button>
+                  <button title="Excluir matéria" onClick={(e) => { e.stopPropagation(); setConfirmDeleteSubject(subject); }}
+                    className="p-2 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all">
+                    <Trash2 size={14} />
                   </button>
                 </div>
-              </div>
-            ))}
+              );
+
+              const openBtn = (
+                <button onClick={(e) => { e.stopPropagation(); open(); }}
+                  className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg transition-all flex-shrink-0 whitespace-nowrap"
+                  style={{ backgroundColor: `${accent}18`, color: accent }}>
+                  <Folder size={12} fill="currentColor" /> Abrir
+                </button>
+              );
+
+              const semesterBadge = subject.semester && (
+                <span className={`text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap ${isDark ? 'bg-white/8 text-slate-400' : 'bg-black/6 text-slate-500'}`}>
+                  {subject.semester}
+                </span>
+              );
+
+              const noteCount = subject.noteCount > 0 && (
+                <span className="text-slate-500 text-xs whitespace-nowrap">
+                  {subject.noteCount} aula{subject.noteCount !== 1 ? 's' : ''}
+                </span>
+              );
+
+              const cardBorder = isDark
+                ? 'border-white/5 hover:border-white/10'
+                : 'border-black/6 hover:border-black/12 shadow-sm';
+
+              // ─── Grid: card vertical ───────────────────────────────────────
+              if (layoutView === 'grid') {
+                return (
+                  <div key={subject._id} onClick={open}
+                    className={`glass group relative flex flex-col justify-between gap-4 p-5 rounded-2xl border cursor-pointer transition-all min-h-[11rem] ${cardBorder}`}>
+                    <div className="absolute -top-8 -right-8 w-28 h-28 rounded-full opacity-10 blur-2xl group-hover:opacity-20 transition-opacity pointer-events-none"
+                      style={{ backgroundColor: accent }} />
+
+                    <div className="absolute top-3 right-3 z-20">{actions}</div>
+
+                    <div className="relative z-10 flex items-start gap-3 pr-16">
+                      <span className="text-2xl flex-shrink-0 leading-none">{subject.emoji || '📚'}</span>
+                      <div className="min-w-0 flex-1">
+                        <h3 title={subject.name}
+                          className={`font-semibold text-base leading-snug line-clamp-2 break-words group-hover:text-blue-300 transition-colors ${isDark ? 'text-white' : 'text-slate-800'}`}>
+                          {subject.name}
+                        </h3>
+                        {subject.description && (
+                          <p className="text-slate-500 text-xs mt-1 line-clamp-2">{subject.description}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="relative z-10 flex items-end justify-between gap-2">
+                      <div className="flex flex-col items-start gap-1 min-w-0">
+                        {semesterBadge}
+                        {noteCount}
+                      </div>
+                      {openBtn}
+                    </div>
+                  </div>
+                );
+              }
+
+              // ─── Lista: linha horizontal ───────────────────────────────────
+              return (
+                <div key={subject._id} onClick={open}
+                  className={`group relative flex items-center gap-4 p-4 rounded-2xl border cursor-pointer transition-all ${cardBorder} ${isDark ? 'hover:bg-white/2' : 'hover:bg-black/2'}`}>
+                  <span className="text-2xl flex-shrink-0 leading-none">{subject.emoji || '📚'}</span>
+
+                  <div className="min-w-0 flex-1">
+                    <h3 title={subject.name}
+                      className={`font-semibold text-base leading-tight truncate group-hover:text-blue-300 transition-colors ${isDark ? 'text-white' : 'text-slate-800'}`}>
+                      {subject.name}
+                    </h3>
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                      {semesterBadge}
+                      {noteCount}
+                    </div>
+                  </div>
+
+                  {actions}
+                  {openBtn}
+                </div>
+              );
+            })}
           </div>
         )}
       </main>
