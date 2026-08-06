@@ -52,3 +52,15 @@ exports.adminOnly = (req, res, next) => {
   }
   next();
 };
+
+// Leitura da área de equipe: admin ou TI. O TI enxerga usuários e conteúdo
+// para dar suporte, mas alterar cargos continua exclusivo do admin — senão
+// um TI comprometido se autopromoveria.
+exports.staffOnly = (req, res, next) => {
+  if (!req.user) return res.status(401).json({ message: 'Não autorizado.' });
+
+  if (req.user.role !== 'admin' && req.user.role !== 'ti') {
+    return res.status(404).json({ message: 'Recurso não encontrado.' });
+  }
+  next();
+};

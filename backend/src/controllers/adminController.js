@@ -114,6 +114,57 @@ exports.getUserDetail = async (req, res) => {
   }
 };
 
+// PATCH /api/admin/users/:id/role   { role, password }
+// Exclusivo de admin (a rota usa adminOnly, não staffOnly).
+exports.setUserRole = async (req, res) => {
+  try {
+    const { role } = req.body;
+    const password = typeof req.body.password === 'string' ? req.body.password : '';
+
+    if (!['user', 'ti', 'admin'].includes(role))
+      return res.status(400).json({ message: 'Cargo inválido.' });
+
+    // Conceder privilégio é a ação mais sensível do sistema: uma sessão
+    // sequestrada poderia criar um admin permanente. Exigir a senha de quem
+    // promove fecha essa porta.
+    const requisitante = await User.findById(req.user.id).select('+password');
+    if (!requisitante) return res.status(401).json({ message: 'Não autorizado.' });
+
+    const bcrypt = require('bcryptjs');
+    if (!(await bcrypt.compare(password, requisitante.password)))
+      return res.status(400).json({ message: 'Senha incorreta.' });
+
+    // Ninguém muda o próprio cargo — evita autorrebaixamento acidental e
+    // impede que o último admin se tranque para fora sozinho.
+    if (req.params.id === req.user.id)
+      return res.status(400).json({ message: 'Você não pode alterar o seu próprio cargo.' });
+
+    const alvo = await User.findById(req.params.id);
+    if (!alvo) return res.status(404).json({ message: 'Usuário não encontrado.' });
+
+    if (alvo.role === role)
+      return res.status(400).json({ message: `Este usuário já é ${role}.` });
+
+    // Rebaixar o último admin deixaria o sistema sem ninguém capaz de promover.
+    if (alvo.role === 'admin' && role !== 'admin') {
+      const admins = await User.countDocuments({ role: 'admin' });
+      if (admins <= 1)
+        return res.status(400).json({ message: 'Este é o último administrador. Promova outro antes de rebaixá-lo.' });
+    }
+
+    const anterior = alvo.role;
+    alvo.role = role;
+    await alvo.save();
+
+    // Trilha de auditoria: mudança de privilégio precisa ficar registrada.
+    console.log(`[ADMIN] ${req.user.email} alterou ${alvo.email}: ${anterior} -> ${role}`);
+
+    res.json({ message: `Cargo alterado para ${role}.`, role: alvo.role });
+  } catch (e) {
+    res.status(500).json({ message: 'Erro ao alterar cargo.' });
+  }
+};
+
 // GET /api/admin/decks/:id
 // Conteúdo de um deck alheio — leitura apenas.
 exports.getDeckDetail = async (req, res) => {

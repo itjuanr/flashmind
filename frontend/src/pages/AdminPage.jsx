@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { useToast } from '../context/ToastContext';
+import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
@@ -24,10 +25,27 @@ function StatTile({ icon: Icon, label, value, isDark }) {
   );
 }
 
+const CARGOS = [
+  { value: 'user',  label: 'Usuário', desc: 'Sem acesso à área de equipe.' },
+  { value: 'ti',    label: 'TI',      desc: 'Vê usuários e conteúdo. Não altera cargos.' },
+  { value: 'admin', label: 'Admin',   desc: 'Acesso total, incluindo promover e rebaixar.' },
+];
+
+const badgeCargo = (role) => {
+  if (role === 'admin') return { txt: 'admin', cls: 'bg-blue-500/15 text-blue-400' };
+  if (role === 'ti')    return { txt: 'ti',    cls: 'bg-violet-500/15 text-violet-400' };
+  return null;
+};
+
 export default function AdminPage() {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const toast = useToast();
+  const { user: eu } = useAuth();
+  const souAdmin = eu?.role === 'admin';
+
+  const [cargoModal, setCargoModal] = useState(null); // { alvo, role, senha }
+  const [salvandoCargo, setSalvandoCargo] = useState(false);
 
   const [stats, setStats]     = useState(null);
   const [negado, setNegado]   = useState(false);
@@ -67,6 +85,22 @@ export default function AdminPage() {
       const r = await api.get(`/admin/users/${id}`);
       setDetalhe(r.data);
     } catch { toast('Erro ao carregar usuário.', 'error'); }
+  };
+
+  const salvarCargo = async (e) => {
+    e.preventDefault();
+    setSalvandoCargo(true);
+    try {
+      const r = await api.patch(`/admin/users/${cargoModal.alvo._id}/role`, {
+        role: cargoModal.role, password: cargoModal.senha,
+      });
+      toast(r.data.message, 'success');
+      setDetalhe((d) => (d ? { ...d, user: { ...d.user, role: r.data.role } } : d));
+      setCargoModal(null);
+      carregarUsuarios();
+    } catch (err) {
+      toast(err.response?.data?.message || 'Erro ao alterar cargo.', 'error');
+    } finally { setSalvandoCargo(false); }
   };
 
   const abrirDeck = async (id) => {
@@ -144,8 +178,10 @@ export default function AdminPage() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <p className={`font-semibold text-sm truncate ${isDark ? 'text-white' : 'text-slate-800'}`}>{u.name}</p>
-                        {u.role === 'admin' && (
-                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-400 uppercase tracking-wide flex-shrink-0">admin</span>
+                        {badgeCargo(u.role) && (
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide flex-shrink-0 ${badgeCargo(u.role).cls}`}>
+                            {badgeCargo(u.role).txt}
+                          </span>
                         )}
                         {!u.isVerified && (
                           <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 uppercase tracking-wide flex-shrink-0">não verif.</span>
@@ -197,9 +233,22 @@ export default function AdminPage() {
                   </p>
                   <p className="text-slate-600 text-xs flex items-center gap-1.5 mt-1">
                     <Calendar size={12} className="flex-shrink-0" /> Desde {fmtData(detalhe.user.createdAt)}
-                    {detalhe.user.role === 'admin' && <span className="text-blue-400 font-semibold">· admin</span>}
+                    {badgeCargo(detalhe.user.role) && (
+                      <span className={`font-semibold ${detalhe.user.role === 'admin' ? 'text-blue-400' : 'text-violet-400'}`}>
+                        · {badgeCargo(detalhe.user.role).txt}
+                      </span>
+                    )}
                   </p>
                 </div>
+
+                {/* Só admin promove. Um TI vê a tela, mas não este botão — e,
+                    se forçar a chamada, o adminOnly da rota barra. */}
+                {souAdmin && detalhe.user._id !== eu?.id && (
+                  <Button variant="secondary" size="md" icon={ShieldCheck} className="flex-shrink-0 self-start"
+                    onClick={() => setCargoModal({ alvo: detalhe.user, role: detalhe.user.role || 'user', senha: '' })}>
+                    Alterar cargo
+                  </Button>
+                )}
               </div>
             </div>
 
@@ -229,6 +278,50 @@ export default function AdminPage() {
           </>
         )}
       </main>
+
+      {cargoModal && (
+        <Modal onClose={() => !salvandoCargo && setCargoModal(null)} size="sm" dismissable={!salvandoCargo}>
+          <form onSubmit={salvarCargo} className="p-6 sm:p-8">
+            <h3 className={`font-bold text-lg mb-1 ${isDark ? 'text-white' : 'text-slate-800'}`}>Alterar cargo</h3>
+            <p className="text-slate-500 text-sm mb-5 break-words">{cargoModal.alvo.name} · {cargoModal.alvo.email}</p>
+
+            <div className="space-y-2 mb-5">
+              {CARGOS.map((c) => (
+                <button key={c.value} type="button"
+                  onClick={() => setCargoModal((m) => ({ ...m, role: c.value }))}
+                  className={`w-full text-left px-4 py-3 rounded-lg border transition-all ${
+                    cargoModal.role === c.value
+                      ? 'border-blue-500/50 bg-blue-500/10'
+                      : isDark ? 'border-white/8 hover:border-white/15' : 'border-black/8 hover:border-black/15'
+                  }`}>
+                  <p className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-slate-800'}`}>{c.label}</p>
+                  <p className="text-xs text-slate-500 mt-0.5">{c.desc}</p>
+                </button>
+              ))}
+            </div>
+
+            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2" htmlFor="admin-senha">
+              Confirme com a sua senha
+            </label>
+            <input id="admin-senha" type="password" required autoComplete="current-password"
+              value={cargoModal.senha}
+              onChange={(e) => setCargoModal((m) => ({ ...m, senha: e.target.value }))}
+              className={`w-full border px-4 py-3 rounded-lg outline-none transition-all text-sm mb-2 ${
+                isDark ? 'bg-white/4 border-white/8 focus:border-blue-500/50 text-white'
+                       : 'bg-black/3 border-black/8 focus:border-blue-500/50 text-slate-800'}`} />
+            <p className="text-xs text-slate-500 mb-5 leading-relaxed">
+              Conceder privilégio é a ação mais sensível do sistema — a senha impede que uma sessão sequestrada crie um admin.
+            </p>
+
+            <div className="flex flex-col-reverse sm:flex-row gap-3">
+              <Button type="button" variant="secondary" size="lg" fullWidth
+                disabled={salvandoCargo} onClick={() => setCargoModal(null)}>Cancelar</Button>
+              <Button type="submit" variant="primary" size="lg" fullWidth loading={salvandoCargo}
+                disabled={cargoModal.role === cargoModal.alvo.role}>Salvar cargo</Button>
+            </div>
+          </form>
+        </Modal>
+      )}
 
       {deckAberto && (
         <Modal onClose={() => setDeckAberto(null)} size="3xl">

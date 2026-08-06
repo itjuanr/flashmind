@@ -2,9 +2,13 @@ const mongoose = require('mongoose');
 
 const UserSchema = new mongoose.Schema({
   name:      { type: String, required: true },
-  // Autorização. Só é concedido pelo script scripts/setAdmin.js, que exige
-  // acesso direto ao banco — não há rota que promova ninguém a admin.
-  role:      { type: String, enum: ['user', 'admin'], default: 'user' },
+  // Autorização, em ordem crescente de poder:
+  //   user  — nenhum acesso à área de equipe
+  //   ti    — lê usuários e conteúdo (suporte), NÃO altera cargos
+  //   admin — tudo, incluindo promover e rebaixar
+  // O primeiro admin sai do script scripts/setAdmin.js, que exige acesso ao
+  // banco. Depois disso, admins podem promover pela própria tela.
+  role:      { type: String, enum: ['user', 'ti', 'admin'], default: 'user' },
   email:     { type: String, required: true, unique: true, lowercase: true },
   password:  { type: String, required: true, select: false },
   dailyGoal: { type: Number, default: 0 },

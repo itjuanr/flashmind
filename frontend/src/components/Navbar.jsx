@@ -6,7 +6,7 @@ import GlobalSearch from './GlobalSearch';
 import { Sparkles, LayoutDashboard, Star, LogOut, ChevronDown, Menu, X, Sun, Moon, BarChart2, Bell, Mail, BookOpen, Play, GraduationCap, UserCog, ShieldCheck } from 'lucide-react';
 import api from '../services/api';
 
-const navLinks = [
+const BASE_LINKS = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/notebook',  label: 'Caderno',   icon: GraduationCap   },
   { to: '/favorites', label: 'Favoritos', icon: Star            },
@@ -14,10 +14,16 @@ const navLinks = [
   { to: '/contact',   label: 'Contato',   icon: Mail            },
 ];
 
+const ADMIN_LINK = { to: '/admin', label: 'Admin', icon: ShieldCheck };
+
 export default function Navbar() {
   const { user, logout } = useAuth();
   const { theme, toggle } = useTheme();
   const location = useLocation();
+  // Atalho para quem tem cargo de equipe. Não é proteção: quem não tem cargo
+  // recebe 404 da API mesmo digitando /admin na barra de endereços.
+  const isStaff = user?.role === 'admin' || user?.role === 'ti';
+  const navLinks = isStaff ? [...BASE_LINKS, ADMIN_LINK] : BASE_LINKS;
   const navigate = useNavigate();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileOpen, setMobileOpen]     = useState(false);
@@ -208,13 +214,6 @@ export default function Navbar() {
                   className={`w-full flex items-center gap-2 px-4 py-3 text-sm transition-colors ${isDark ? 'text-slate-300 hover:bg-white/8' : 'text-slate-600 hover:bg-black/5'}`}>
                   <UserCog size={15} className="text-slate-500" /> Meu perfil
                 </Link>
-                {/* Só um atalho: esconder o item não é o que protege a área. */}
-                {user?.role === 'admin' && (
-                  <Link to="/admin" onClick={() => setDropdownOpen(false)}
-                    className={`w-full flex items-center gap-2 px-4 py-3 text-sm transition-colors ${isDark ? 'text-slate-300 hover:bg-white/8' : 'text-slate-600 hover:bg-black/5'}`}>
-                    <ShieldCheck size={15} className="text-blue-400" /> Administração
-                  </Link>
-                )}
                 <Link to="/contact" onClick={() => setDropdownOpen(false)}
                   className={`w-full flex items-center gap-2 px-4 py-3 text-sm transition-colors ${isDark ? 'text-slate-300 hover:bg-white/8' : 'text-slate-600 hover:bg-black/5'}`}>
                   <Mail size={15} className="text-slate-500" /> Contato / Suporte

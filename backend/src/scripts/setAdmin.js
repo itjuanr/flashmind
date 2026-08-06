@@ -10,18 +10,23 @@
  */
 require('dotenv').config();
 const mongoose = require('mongoose');
+// Reusa o connectDB do app: ele força DNS 8.8.8.8/1.1.1.1, sem o que resolvers
+// que não fazem lookup SRV falham com querySrv ECONNREFUSED.
+const connectDB = require('../config/db');
 const User = require('../models/User');
 
 (async () => {
   const email  = (process.argv[2] || '').trim().toLowerCase();
   const remove = process.argv.includes('--remove');
+  const argRole = (process.argv[3] || '').trim().toLowerCase();
 
-  if (!email) {
-    console.error('Uso: node src/scripts/setAdmin.js <email> [--remove]');
+  if (!email || (argRole && !['user', 'ti', 'admin'].includes(argRole))) {
+    console.error('Uso: node src/scripts/setAdmin.js <email> [user|ti|admin]');
+    console.error('     node src/scripts/setAdmin.js <email> --remove   (equivale a "user")');
     process.exit(1);
   }
 
-  await mongoose.connect(process.env.MONGODB_URI);
+  await connectDB();
 
   const user = await User.findOne({ email });
   if (!user) {
@@ -30,7 +35,7 @@ const User = require('../models/User');
     process.exit(1);
   }
 
-  const novoPapel = remove ? 'user' : 'admin';
+  const novoPapel = remove ? 'user' : (argRole || 'admin');
   if (user.role === novoPapel) {
     console.log(`"${user.name}" <${user.email}> já é ${novoPapel}. Nada a fazer.`);
   } else {
