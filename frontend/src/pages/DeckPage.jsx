@@ -6,7 +6,7 @@ import FlashCard from '../components/FlashCard';
 import { useToast } from '../context/ToastContext';
 import { useTheme } from '../context/ThemeContext';
 import {
-  Plus, ArrowLeft, Loader2, X, BookOpen, Image, Link, Upload,
+  Plus, ArrowLeft, Loader2, X, BookOpen, Image, Link as LinkIcon, Upload,
   Trash2 as TrashIcon, Download, FileUp, Search, History, FileArchive,
   CheckCircle2, XCircle, Clock, LayoutGrid, MoreVertical, Copy, FileText, Folder,
 } from 'lucide-react';
@@ -37,7 +37,7 @@ function ImagePicker({ value, onChange, label }) {
         <div className="flex gap-1">
           <button type="button" onClick={() => setMode('url')}
             className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs transition-all ${mode === 'url' ? 'bg-blue-500/20 text-blue-400' : 'text-slate-500 hover:text-slate-300'}`}>
-            <Link size={11} /> URL
+            <LinkIcon size={11} /> URL
           </button>
           <button type="button" onClick={() => setMode('upload')}
             className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs transition-all ${mode === 'upload' ? 'bg-blue-500/20 text-blue-400' : 'text-slate-500 hover:text-slate-300'}`}>
@@ -810,7 +810,7 @@ export default function DeckPage() {
                         }}
                         disabled={sharing}
                         className={`w-full flex items-center gap-2.5 px-4 py-3 text-sm transition-all ${shareToken ? 'text-emerald-400 hover:bg-emerald-500/10' : isDark ? 'text-slate-300 hover:bg-white/8' : 'text-slate-700 hover:bg-black/4'}`}>
-                        <Link size={14} className="text-slate-500" /> {shareToken ? 'Gerenciar link público' : 'Gerar link público'}
+                        <LinkIcon size={14} className="text-slate-500" /> {shareToken ? 'Gerenciar link público' : 'Gerar link público'}
                       </button>
                       <div className={`h-px mx-3 ${isDark ? 'bg-white/8' : 'bg-black/6'}`} />
                       <button onClick={() => { setConfirmDeleteDeck(true); setShowDeckMenu(false); }}

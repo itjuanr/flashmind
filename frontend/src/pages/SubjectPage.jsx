@@ -289,16 +289,28 @@ export default function SubjectPage() {
           const calculatedTotalFlashcards = dRes.data.reduce((sum, deck) => sum + (deck.flashcardCount || 0), 0);
           setTotalFlashcards(calculatedTotalFlashcards);
         } else {
-          const [sRes, nRes, dRes] = await Promise.all([
+          const [sRes, nRes, dRes] = await Promise.allSettled([
             api.get(`/notebook/subjects/${subjectId}`),
             api.get(`/notebook/subjects/${subjectId}/notes`),
             api.get(`/notebook/subjects/${subjectId}/decks`),
           ]);
-          setSubject(sRes.data);
-          setNotes(nRes.data);
-          setDecks(dRes.data);
-          const calculatedTotalFlashcards = dRes.data.reduce((sum, deck) => sum + (deck.flashcardCount || 0), 0);
-          setTotalFlashcards(calculatedTotalFlashcards);
+
+          // Só a matéria é essencial: sem ela não há o que renderizar.
+          if (sRes.status === 'rejected') throw sRes.reason;
+          setSubject(sRes.value.data);
+
+          // Aulas e decks falham de forma isolada, sem derrubar a página.
+          if (nRes.status === 'fulfilled') setNotes(nRes.value.data);
+          else toast('Não foi possível carregar as aulas.', 'error');
+
+          if (dRes.status === 'fulfilled') {
+            setDecks(dRes.value.data);
+            setTotalFlashcards(dRes.value.data.reduce((sum, deck) => sum + (deck.flashcardCount || 0), 0));
+          } else {
+            setDecks([]);
+            setTotalFlashcards(0);
+            toast('Não foi possível carregar os decks.', 'error');
+          }
         }
       } catch (error) {
         if (error.response && error.response.status === 404) {
