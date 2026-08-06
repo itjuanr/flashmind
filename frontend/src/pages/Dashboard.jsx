@@ -372,7 +372,6 @@ function DeckModal({ onClose, onSaved, editing, toast }) {
 
 // ─── Onboarding (primeiro acesso) ─────────────────────────────────────────────
 function OnboardingModal({ onClose, onCreateFirst }) {
-  const { isDark } = useTheme ? useTheme() : { isDark: true };
   return (
     <div className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
       <div className="w-full max-w-sm bg-[#0F0F18] rounded-3xl border border-white/10 p-8 text-center">
@@ -671,15 +670,15 @@ export default function Dashboard() {
       {/* Modal confirmar reset */}
       {confirmReset && (
         <div className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-sm bg-[#0F0F18] rounded-3xl border border-white/10 p-8 text-center">
+          <div className={`w-full max-w-sm rounded-3xl border p-8 text-center ${isDark ? 'bg-[#0F0F18] border-white/10' : 'bg-white border-black/8 shadow-2xl'}`}>
             <div className="text-4xl mb-4">🔄</div>
-            <h3 className="text-white font-bold text-lg mb-2">Resetar histórico?</h3>
+            <h3 className={`font-bold text-lg mb-2 ${isDark ? 'text-white' : 'text-slate-800'}`}>Resetar histórico?</h3>
             <p className="text-slate-500 text-sm mb-8">A taxa de acerto e os dados de estudo serão apagados permanentemente. Os seus decks e flashcards continuam intactos.</p>
             <div className="flex gap-3">
               <button onClick={() => setConfirmReset(false)} disabled={resetting}
-                className="flex-1 bg-white/5 hover:bg-white/10 border border-white/8 text-slate-300 font-semibold py-3 rounded-xl transition-all text-sm disabled:opacity-50">Cancelar</button>
+                className={`flex-1 border font-semibold py-3 rounded-xl transition-all text-sm disabled:opacity-50 ${isDark ? 'bg-white/5 hover:bg-white/10 border-white/8 text-slate-300' : 'bg-black/3 hover:bg-black/6 border-black/8 text-slate-600'}`}>Cancelar</button>
               <button onClick={handleReset} disabled={resetting}
-                className="flex-1 bg-red-500/15 hover:bg-red-500/25 border border-red-500/25 text-red-400 font-semibold py-3 rounded-xl transition-all text-sm disabled:opacity-60 flex items-center justify-center gap-2">
+                className={`flex-1 bg-red-500/15 hover:bg-red-500/25 border border-red-500/25 font-semibold py-3 rounded-xl transition-all text-sm disabled:opacity-60 flex items-center justify-center gap-2 ${isDark ? 'text-red-400' : 'text-red-600'}`}>
                 {resetting ? <><Loader2 size={15} className="animate-spin" /> Resetando...</> : 'Resetar'}
               </button>
             </div>
@@ -690,15 +689,15 @@ export default function Dashboard() {
       {/* Modal confirmar exclusão */}
       {confirmDelete && (
         <div className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-sm bg-[#0F0F18] rounded-3xl border border-white/10 p-8 text-center">
+          <div className={`w-full max-w-sm rounded-3xl border p-8 text-center ${isDark ? 'bg-[#0F0F18] border-white/10' : 'bg-white border-black/8 shadow-2xl'}`}>
             <div className="text-4xl mb-4">🗑️</div>
-            <h3 className="text-white font-bold text-lg mb-2">Excluir deck?</h3>
-            <p className="text-slate-500 text-sm mb-8">O deck <span className="text-white font-medium">"{confirmDelete.name}"</span> e todos os seus flashcards serão removidos permanentemente.</p>
+            <h3 className={`font-bold text-lg mb-2 ${isDark ? 'text-white' : 'text-slate-800'}`}>Excluir deck?</h3>
+            <p className="text-slate-500 text-sm mb-8">O deck <span className={`font-medium ${isDark ? 'text-white' : 'text-slate-800'}`}>"{confirmDelete.name}"</span> e todos os seus flashcards serão removidos permanentemente.</p>
             <div className="flex gap-3">
               <button onClick={() => setConfirmDelete(null)} disabled={deleting}
-                className="flex-1 bg-white/5 hover:bg-white/10 border border-white/8 text-slate-300 font-semibold py-3 rounded-xl transition-all text-sm disabled:opacity-50">Cancelar</button>
+                className={`flex-1 border font-semibold py-3 rounded-xl transition-all text-sm disabled:opacity-50 ${isDark ? 'bg-white/5 hover:bg-white/10 border-white/8 text-slate-300' : 'bg-black/3 hover:bg-black/6 border-black/8 text-slate-600'}`}>Cancelar</button>
               <button onClick={handleDelete} disabled={deleting}
-                className="flex-1 bg-red-500/15 hover:bg-red-500/25 border border-red-500/25 text-red-400 font-semibold py-3 rounded-xl transition-all text-sm disabled:opacity-60 flex items-center justify-center gap-2">
+                className={`flex-1 bg-red-500/15 hover:bg-red-500/25 border border-red-500/25 font-semibold py-3 rounded-xl transition-all text-sm disabled:opacity-60 flex items-center justify-center gap-2 ${isDark ? 'text-red-400' : 'text-red-600'}`}>
                 {deleting ? <><Loader2 size={15} className="animate-spin" /> Excluindo...</> : 'Excluir'}
               </button>
             </div>

@@ -385,7 +385,7 @@ export default function NotebookPage() {
             <div className="text-4xl mb-4">⚠️</div>
             <h3 className={`font-bold text-lg mb-2 ${isDark ? 'text-white' : 'text-slate-800'}`}>Excluir matéria?</h3>
             <p className="text-slate-500 text-sm mb-6">
-              A matéria "<span className="font-semibold text-white">{confirmDeleteSubject.name}</span>" e todas as suas aulas e decks associados serão removidos.
+              A matéria "<span className={`font-semibold ${isDark ? 'text-white' : 'text-slate-800'}`}>{confirmDeleteSubject.name}</span>" e todas as suas aulas e decks associados serão removidos.
             </p>
             <div className="flex gap-3">
               <button onClick={() => setConfirmDeleteSubject(null)}

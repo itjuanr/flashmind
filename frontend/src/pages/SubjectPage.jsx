@@ -358,7 +358,7 @@ export default function SubjectPage() {
               {totalFlashcards > 0 && (
                 <p className="text-slate-500 text-sm mt-2 flex items-center gap-1.5">
                   <Book size={14} className="text-blue-400" />
-                  <span className="font-medium text-white">{totalFlashcards}</span> flashcard{totalFlashcards !== 1 ? 's' : ''}
+                  <span className={`font-medium ${isDark ? 'text-white' : 'text-slate-800'}`}>{totalFlashcards}</span> flashcard{totalFlashcards !== 1 ? 's' : ''}
                 </p>
               )}
             </div>
@@ -522,7 +522,7 @@ export default function SubjectPage() {
             <div className="text-4xl mb-4">⚠️</div>
             <h3 className={`font-bold text-lg mb-2 ${isDark ? 'text-white' : 'text-slate-800'}`}>Excluir aula?</h3>
             <p className="text-slate-500 text-sm mb-6">
-              "<span className="font-semibold text-white">{confirmDelete.title}</span>" e todos os seus anexos serão removidos.
+              "<span className={`font-semibold ${isDark ? 'text-white' : 'text-slate-800'}`}>{confirmDelete.title}</span>" e todos os seus anexos serão removidos.
             </p>
             <div className="flex gap-3">
               <button onClick={() => setConfirmDelete(null)}

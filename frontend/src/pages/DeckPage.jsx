@@ -660,9 +660,9 @@ export default function DeckPage() {
 
       {showShareModal && shareToken && (
         <div className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-sm bg-[#0F0F18] rounded-3xl border border-white/10 p-8 text-center">
+          <div className={`w-full max-w-sm rounded-3xl border p-8 text-center ${isDark ? 'bg-[#0F0F18] border-white/10' : 'bg-white border-black/8 shadow-2xl'}`}>
             <div className="text-4xl mb-4">🔗</div>
-            <h3 className="text-white font-bold text-lg mb-2">Deck compartilhado!</h3>
+            <h3 className={`font-bold text-lg mb-2 ${isDark ? 'text-white' : 'text-slate-800'}`}>Deck compartilhado!</h3>
             <p className="text-slate-500 text-sm mb-6">Qualquer pessoa com este link pode visualizar e clonar o deck.</p>
             <div className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border mb-6 ${isDark ? 'bg-white/4 border-white/8' : 'bg-black/3 border-black/8'}`}>
               <span className="text-xs text-slate-400 truncate flex-1 text-left">{window.location.origin}/share/{shareToken}</span>
@@ -677,7 +677,7 @@ export default function DeckPage() {
                 Revogar link
               </button>
               <button onClick={() => setShowShareModal(false)}
-                className="flex-1 bg-white/5 hover:bg-white/10 border border-white/8 text-slate-300 font-semibold py-3 rounded-xl transition-all text-sm">
+                className={`flex-1 border font-semibold py-3 rounded-xl transition-all text-sm ${isDark ? 'bg-white/5 hover:bg-white/10 border-white/8 text-slate-300' : 'bg-black/3 hover:bg-black/6 border-black/8 text-slate-600'}`}>
                 Fechar
               </button>
             </div>
@@ -687,17 +687,17 @@ export default function DeckPage() {
 
       {confirmDeleteDeck && (
         <div className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-sm bg-[#0F0F18] rounded-3xl border border-white/10 p-8 text-center">
+          <div className={`w-full max-w-sm rounded-3xl border p-8 text-center ${isDark ? 'bg-[#0F0F18] border-white/10' : 'bg-white border-black/8 shadow-2xl'}`}>
             <div className="text-4xl mb-4">⚠️</div>
-            <h3 className="text-white font-bold text-lg mb-2">Excluir deck?</h3>
+            <h3 className={`font-bold text-lg mb-2 ${isDark ? 'text-white' : 'text-slate-800'}`}>Excluir deck?</h3>
             <p className="text-slate-500 text-sm mb-8">
-              O deck <span className="text-white font-medium">"{deck?.name}"</span> e todos os seus {cards.length} card{cards.length !== 1 ? 's' : ''} serão removidos permanentemente.
+              O deck <span className={`font-medium ${isDark ? 'text-white' : 'text-slate-800'}`}>"{deck?.name}"</span> e todos os seus {cards.length} card{cards.length !== 1 ? 's' : ''} serão removidos permanentemente.
             </p>
             <div className="flex gap-3">
               <button onClick={() => setConfirmDeleteDeck(false)}
-                className="flex-1 bg-white/5 hover:bg-white/10 border border-white/8 text-slate-300 font-semibold py-3 rounded-xl transition-all text-sm">Cancelar</button>
+                className={`flex-1 border font-semibold py-3 rounded-xl transition-all text-sm ${isDark ? 'bg-white/5 hover:bg-white/10 border-white/8 text-slate-300' : 'bg-black/3 hover:bg-black/6 border-black/8 text-slate-600'}`}>Cancelar</button>
               <button onClick={handleDeleteDeck}
-                className="flex-1 bg-red-500/15 hover:bg-red-500/25 border border-red-500/25 text-red-400 font-semibold py-3 rounded-xl transition-all text-sm">Excluir tudo</button>
+                className={`flex-1 bg-red-500/15 hover:bg-red-500/25 border border-red-500/25 font-semibold py-3 rounded-xl transition-all text-sm ${isDark ? 'text-red-400' : 'text-red-600'}`}>Excluir tudo</button>
             </div>
           </div>
         </div>
@@ -705,17 +705,17 @@ export default function DeckPage() {
 
       {confirmDeleteCard && (
         <div className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-sm bg-[#0F0F18] rounded-3xl border border-white/10 p-8 text-center">
+          <div className={`w-full max-w-sm rounded-3xl border p-8 text-center ${isDark ? 'bg-[#0F0F18] border-white/10' : 'bg-white border-black/8 shadow-2xl'}`}>
             <div className="text-4xl mb-4">🗑️</div>
-            <h3 className="text-white font-bold text-lg mb-2">Excluir flashcard?</h3>
+            <h3 className={`font-bold text-lg mb-2 ${isDark ? 'text-white' : 'text-slate-800'}`}>Excluir flashcard?</h3>
             <p className="text-slate-500 text-sm mb-8">
-              O card <span className="text-white font-medium">"{confirmDeleteCard.front.length > 40 ? confirmDeleteCard.front.slice(0,40) + '...' : confirmDeleteCard.front}"</span> será removido permanentemente.
+              O card <span className={`font-medium ${isDark ? 'text-white' : 'text-slate-800'}`}>"{confirmDeleteCard.front.length > 40 ? confirmDeleteCard.front.slice(0,40) + '...' : confirmDeleteCard.front}"</span> será removido permanentemente.
             </p>
             <div className="flex gap-3">
               <button onClick={() => setConfirmDeleteCard(null)}
-                className="flex-1 bg-white/5 hover:bg-white/10 border border-white/8 text-slate-300 font-semibold py-3 rounded-xl transition-all text-sm">Cancelar</button>
+                className={`flex-1 border font-semibold py-3 rounded-xl transition-all text-sm ${isDark ? 'bg-white/5 hover:bg-white/10 border-white/8 text-slate-300' : 'bg-black/3 hover:bg-black/6 border-black/8 text-slate-600'}`}>Cancelar</button>
               <button onClick={handleDelete}
-                className="flex-1 bg-red-500/15 hover:bg-red-500/25 border border-red-500/25 text-red-400 font-semibold py-3 rounded-xl transition-all text-sm">Excluir</button>
+                className={`flex-1 bg-red-500/15 hover:bg-red-500/25 border border-red-500/25 font-semibold py-3 rounded-xl transition-all text-sm ${isDark ? 'text-red-400' : 'text-red-600'}`}>Excluir</button>
             </div>
           </div>
         </div>

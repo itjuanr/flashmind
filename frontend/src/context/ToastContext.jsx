@@ -1,51 +1,72 @@
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, useRef } from 'react';
 import { CheckCircle2, XCircle, AlertCircle, X } from 'lucide-react';
+import { useTheme } from './ThemeContext';
 
 const ToastContext = createContext(null);
 
 const icons = {
-  success: <CheckCircle2 size={16} className="text-emerald-400 flex-shrink-0" />,
-  error: <XCircle size={16} className="text-red-400 flex-shrink-0" />,
-  info: <AlertCircle size={16} className="text-blue-400 flex-shrink-0" />,
+  success: <CheckCircle2 size={17} className="text-emerald-400 flex-shrink-0" />,
+  error:   <XCircle      size={17} className="text-red-400 flex-shrink-0" />,
+  info:    <AlertCircle  size={17} className="text-blue-400 flex-shrink-0" />,
 };
 
 const styles = {
-  success: 'border-emerald-500/20 bg-emerald-500/8',
-  error: 'border-red-500/20 bg-red-500/8',
-  info: 'border-blue-500/20 bg-blue-500/8',
+  dark: {
+    success: 'border-emerald-500/25 bg-emerald-500/10',
+    error:   'border-red-500/25 bg-red-500/10',
+    info:    'border-blue-500/25 bg-blue-500/10',
+  },
+  light: {
+    success: 'border-emerald-500/30 bg-emerald-50',
+    error:   'border-red-500/30 bg-red-50',
+    info:    'border-blue-500/30 bg-blue-50',
+  },
 };
 
 export function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([]);
+  const nextId = useRef(0);
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
 
-  const toast = useCallback((message, type = 'info', duration = 3500) => {
-    const id = Date.now();
-    setToasts((prev) => [...prev, { id, message, type }]);
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, duration);
+  const remove = useCallback((id) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  const remove = (id) => setToasts((prev) => prev.filter((t) => t.id !== id));
+  const toast = useCallback((message, type = 'info', duration = 3500) => {
+    // Contador em vez de Date.now(): dois toasts no mesmo milissegundo
+    // gerariam a mesma key e o React descartaria um deles.
+    const id = ++nextId.current;
+    setToasts((prev) => [...prev, { id, message, type }]);
+    setTimeout(() => remove(id), duration);
+  }, [remove]);
 
   return (
     <ToastContext.Provider value={toast}>
       {children}
 
-      {/* Container dos toasts */}
-      <div className="fixed bottom-6 right-6 z-[100] flex flex-col gap-2 items-end">
+      {/* Banner de toasts — centralizado no topo, logo acima do conteúdo.
+          pointer-events-none no container deixa clicar através da faixa vazia. */}
+      <div className="fixed top-20 sm:top-24 left-0 right-0 z-[100] flex flex-col items-center gap-2 px-4 pointer-events-none">
         {toasts.map((t) => (
           <div
             key={t.id}
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl border glass shadow-xl text-sm text-white max-w-xs animate-slide-in ${styles[t.type]}`}
+            role="status"
+            aria-live="polite"
+            className={`pointer-events-auto w-full max-w-md flex items-center gap-3 px-4 py-3 rounded-xl border glass shadow-lg text-sm animate-slide-down ${
+              styles[isDark ? 'dark' : 'light'][t.type]
+            } ${isDark ? 'text-white' : 'text-slate-800'}`}
           >
             {icons[t.type]}
             <span className="flex-1 leading-snug">{t.message}</span>
             <button
               onClick={() => remove(t.id)}
-              className="text-slate-500 hover:text-white transition-colors ml-1"
+              aria-label="Fechar aviso"
+              className={`flex-shrink-0 transition-colors ${
+                isDark ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900'
+              }`}
             >
-              <X size={14} />
+              <X size={15} />
             </button>
           </div>
         ))}
