@@ -14,6 +14,7 @@ const studyRoutes     = require('./src/routes/study');
 const searchRoutes    = require('./src/routes/search');
 const notebookRoutes  = require('./src/routes/notebook');
 const adminRoutes     = require('./src/routes/admin');
+const rankingRoutes   = require('./src/routes/ranking');
 
 connectDB();
 
@@ -114,6 +115,29 @@ app.use('/api/auth/resend-verification', emailLimiter);
 app.use('/api/auth/change-password',     authLimiter);
 app.use('/api/auth/change-email',        emailLimiter);
 
+// Área de equipe: lê dados de terceiros. Um limite próprio, mais apertado que
+// o global, reduz o estrago caso uma sessão de staff seja comprometida.
+const adminLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Muitas requisições administrativas. Aguarde alguns minutos.' },
+});
+app.use('/api/admin', adminLimiter);
+
+// Endpoint público de matéria compartilhada: sem sessão, então só o IP limita.
+// Sem isto, dá para varrer tokens em força bruta.
+const shareLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Muitas requisições. Tente novamente em minutos.' },
+});
+app.use('/api/notebook/subjects/share', shareLimiter);
+app.use('/api/decks/share',             shareLimiter);
+
 // ── Health check ──────────────────────────────────────────────────────────────
 app.get('/api/health', (_, res) => res.json({ status: 'ok', ts: new Date() }));
 
@@ -125,6 +149,7 @@ app.use('/api/study',      studyRoutes);
 app.use('/api/search',     searchRoutes);
 app.use('/api/notebook',   notebookRoutes);
 app.use('/api/admin',      adminRoutes);
+app.use('/api/ranking',    rankingRoutes);
 
 // ── Error handler ─────────────────────────────────────────────────────────────
 app.use((err, req, res, next) => {

@@ -11,6 +11,11 @@ const StudySession = require('../models/StudySession');
 // que permitem sequestrar a conta alheia. pendingEmail idem, é dado sensível.
 const SAFE_USER = '-password -verifyToken -verifyTokenExpires -resetToken -resetTokenExpires -emailChangeToken -emailChangeExpires';
 
+// Na listagem o avatar sai fora: é um data URI de até ~2,8MB por usuário, e
+// 20 por página significaria dezenas de MB numa resposta só. A lista mostra
+// iniciais; a foto aparece no detalhe, onde é um usuário de cada vez.
+const SAFE_USER_LISTA = SAFE_USER + ' -avatar';
+
 // GET /api/admin/stats
 exports.getStats = async (req, res) => {
   try {
@@ -52,7 +57,7 @@ exports.listUsers = async (req, res) => {
     }
 
     const [usuarios, total] = await Promise.all([
-      User.find(filtro).select(SAFE_USER).sort({ createdAt: -1 })
+      User.find(filtro).select(SAFE_USER_LISTA).sort({ createdAt: -1 })
         .skip((page - 1) * limit).limit(limit).lean(),
       User.countDocuments(filtro),
     ]);

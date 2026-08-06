@@ -10,4 +10,6 @@ const subjectSchema = new mongoose.Schema({
   shareToken: { type: String, unique: true, sparse: true },
 }, { timestamps: true });
 
+subjectSchema.index({ userId: 1, createdAt: -1 });
+
 module.exports = mongoose.model('Subject', subjectSchema);

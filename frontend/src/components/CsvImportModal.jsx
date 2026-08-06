@@ -3,6 +3,7 @@ import { X, Upload, FileText, AlertCircle, Check, Loader2,
          Table2, CheckSquare, Square, ChevronDown, ChevronUp } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import api from '../services/api';
+import Modal from './ui/Modal';
 
 // ─── Utilitários ──────────────────────────────────────────────────────────────
 
@@ -168,8 +169,6 @@ export default function CsvImportModal({ deckId, deckName, onClose, onImported }
   const [progress, setProgress] = useState(0);
   const [loading, setLoading]   = useState(false);
 
-  const surface = isDark ? 'bg-[#0F0F18] border-white/10' : 'bg-white border-black/8';
-
   const processFile = useCallback(async (file) => {
     setFileName(file.name);
     setError('');
@@ -243,16 +242,17 @@ export default function CsvImportModal({ deckId, deckName, onClose, onImported }
   }`;
 
   return (
-    <div className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
-      <div className={`w-full max-w-2xl rounded-3xl border shadow-2xl ${surface} flex flex-col`} style={{ maxHeight: '92vh' }}>
+    <Modal onClose={onClose} size="2xl">
+      <div className="flex flex-col" style={{ maxHeight: '88vh' }}>
 
         {/* Header */}
-        <div className={`flex items-center justify-between px-7 py-5 border-b flex-shrink-0 ${isDark ? 'border-white/8' : 'border-black/6'}`}>
-          <div>
+        <div className={`flex items-center justify-between px-6 py-5 border-b flex-shrink-0 ${isDark ? 'border-white/8' : 'border-black/6'}`}>
+          <div className="min-w-0">
             <h2 className={`font-bold text-lg ${isDark ? 'text-white' : 'text-slate-800'}`}>Importar cards</h2>
-            <p className="text-slate-500 text-xs mt-0.5">{deckName}</p>
+            <p className="text-slate-500 text-xs mt-0.5 truncate">{deckName}</p>
           </div>
-          <button onClick={onClose} className="text-slate-500 hover:text-slate-300 transition-colors"><X size={20}/></button>
+          <button type="button" onClick={onClose} aria-label="Fechar"
+            className="text-slate-500 hover:text-slate-300 transition-colors flex-shrink-0"><X size={20}/></button>
         </div>
 
         <div className="overflow-y-auto flex-1 p-7">
@@ -416,6 +416,6 @@ export default function CsvImportModal({ deckId, deckName, onClose, onImported }
           )}
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }

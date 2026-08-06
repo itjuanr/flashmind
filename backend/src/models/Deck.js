@@ -22,4 +22,9 @@ const deckSchema = new mongoose.Schema({
   },
 }, { timestamps: true });
 
+// Toda listagem de deck filtra por dono; a de matéria filtra pelos dois juntos.
+// Sem isto o Mongo varre a coleção inteira a cada abertura da Dashboard.
+deckSchema.index({ userId: 1, createdAt: -1 });
+deckSchema.index({ userId: 1, subjectId: 1 });
+
 module.exports = mongoose.model('Deck', deckSchema);

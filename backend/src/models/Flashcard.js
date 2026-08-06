@@ -19,6 +19,9 @@ const FlashcardSchema = new mongoose.Schema({
 
 // Índices compostos para máxima performance nas consultas (Dashboard e Modo Estudo)
 FlashcardSchema.index({ userId: 1, deckId: 1 });
+// As agregações de contagem filtram só por deckId ($in). O índice composto
+// acima não serve para isso: um índice só é usado a partir do seu prefixo.
+FlashcardSchema.index({ deckId: 1 });
 FlashcardSchema.index({ userId: 1, nextReview: 1 });
 
 // Índice de Texto para buscas globais ultra-rápidas e otimizadas

@@ -9,6 +9,29 @@ function getResend() {
   return new Resend(process.env.RESEND_API_KEY);
 }
 
+// Remetente em um só lugar — antes estava repetido em cada função.
+const FROM = 'FlashMind <juanrodrigues@flashmind.site>';
+
+/**
+ * Versão em texto puro. Clientes que não renderizam HTML (e vários filtros de
+ * spam) só olham para isto — sem alternativa em texto, a mensagem chega vazia
+ * ou perde pontuação de reputação.
+ */
+function textoPuro({ titulo, saudacao, corpo, acao, link, rodape }) {
+  return [
+    `FlashMind — ${titulo}`,
+    '',
+    saudacao,
+    corpo,
+    '',
+    `${acao}: ${link}`,
+    '',
+    rodape,
+    '',
+    'Se você não solicitou este e-mail, pode ignorá-lo com segurança.',
+  ].filter((l) => l !== null && l !== undefined).join('\n');
+}
+
 function emailBase(content) {
   return `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -52,9 +75,17 @@ exports.sendConfirmationEmail = async (user, token) => {
   const link = `${BASE_URL}/verify-email/${token}`;
   const resend = getResend();
   await resend.emails.send({
-    from: 'FlashMind <juanrodrigues@flashmind.site>',
+    from: FROM,
     to: user.email,
     subject: '✉️ Confirme seu e-mail — FlashMind',
+    text: textoPuro({
+      titulo: 'Confirme seu e-mail',
+      saudacao: `Olá, ${user.name}!`,
+      corpo: 'Obrigado por criar sua conta no FlashMind. Confirme seu e-mail pelo link abaixo.',
+      acao: 'Confirmar e-mail',
+      link,
+      rodape: 'Este link expira em 24 horas.',
+    }),
     html: emailBase(`
       <h2 style="margin:0 0 12px;font-size:24px;font-weight:900;color:#ffffff;letter-spacing:-0.5px;">
         Confirme seu e-mail ✉️
@@ -78,9 +109,17 @@ exports.sendPasswordResetEmail = async (user, token) => {
   const link = `${BASE_URL}/reset-password/${token}`;
   const resend = getResend();
   await resend.emails.send({
-    from: 'FlashMind <juanrodrigues@flashmind.site>',
+    from: FROM,
     to: user.email,
     subject: '🔑 Redefinir senha — FlashMind',
+    text: textoPuro({
+      titulo: 'Redefinir senha',
+      saudacao: `Olá, ${user.name}!`,
+      corpo: 'Recebemos uma solicitação para redefinir a senha da sua conta FlashMind.',
+      acao: 'Redefinir minha senha',
+      link,
+      rodape: 'Este link expira em 1 hora. Se não foi você, ignore este e-mail.',
+    }),
     html: emailBase(`
       <h2 style="margin:0 0 12px;font-size:24px;font-weight:900;color:#ffffff;letter-spacing:-0.5px;">
         Redefinir senha 🔑
@@ -112,9 +151,17 @@ exports.sendEmailChangeConfirmation = async (user, newEmail, token) => {
   const link = `${BASE_URL}/confirm-email-change/${token}`;
   const resend = getResend();
   await resend.emails.send({
-    from: 'FlashMind <juanrodrigues@flashmind.site>',
+    from: FROM,
     to: newEmail,
     subject: '🔄 Confirme seu novo e-mail — FlashMind',
+    text: textoPuro({
+      titulo: 'Confirme seu novo e-mail',
+      saudacao: `Olá, ${user.name}!`,
+      corpo: `Você pediu para trocar o e-mail da sua conta FlashMind para ${newEmail}.`,
+      acao: 'Confirmar novo e-mail',
+      link,
+      rodape: 'Expira em 1 hora. Até você confirmar, o acesso continua pelo e-mail antigo.',
+    }),
     html: emailBase(`
       <h2 style="margin:0 0 12px;font-size:24px;font-weight:900;color:#ffffff;letter-spacing:-0.5px;">
         Confirme seu novo e-mail 🔄
@@ -147,9 +194,21 @@ exports.sendEmailChangeConfirmation = async (user, newEmail, token) => {
 exports.sendEmailChangeNotice = async (user, newEmail) => {
   const resend = getResend();
   await resend.emails.send({
-    from: 'FlashMind <juanrodrigues@flashmind.site>',
+    from: FROM,
     to: user.email,
     subject: '⚠️ Solicitação de troca de e-mail — FlashMind',
+    // Sem link de ação: este aviso não deve induzir clique. Se a conta foi
+    // tomada, mandar o alvo clicar em algo é o oposto do que se quer.
+    text: [
+      'FlashMind — Pediram para trocar seu e-mail',
+      '',
+      `Olá, ${user.name}.`,
+      `Recebemos um pedido para mudar o e-mail da sua conta para ${newEmail}.`,
+      '',
+      'NÃO FOI VOCÊ? Troque sua senha imediatamente — alguém pode ter acesso',
+      'à sua conta. A troca só se conclui se o link enviado ao novo endereço',
+      'for aberto.',
+    ].join('\n'),
     html: emailBase(`
       <h2 style="margin:0 0 12px;font-size:24px;font-weight:900;color:#ffffff;letter-spacing:-0.5px;">
         Pediram para trocar seu e-mail ⚠️

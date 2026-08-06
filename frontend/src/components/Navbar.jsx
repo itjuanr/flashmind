@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import GlobalSearch from './GlobalSearch';
-import { Sparkles, LayoutDashboard, Star, LogOut, ChevronDown, Menu, X, Sun, Moon, BarChart2, Bell, Mail, BookOpen, Play, GraduationCap, UserCog, ShieldCheck } from 'lucide-react';
+import { Sparkles, LayoutDashboard, Star, LogOut, ChevronDown, Menu, X, Sun, Moon, BarChart2, Bell, Mail, BookOpen, Play, GraduationCap, UserCog, ShieldCheck, Trophy } from 'lucide-react';
 import api from '../services/api';
 
 const BASE_LINKS = [
@@ -11,6 +11,7 @@ const BASE_LINKS = [
   { to: '/notebook',  label: 'Caderno',   icon: GraduationCap   },
   { to: '/favorites', label: 'Favoritos', icon: Star            },
   { to: '/stats',     label: 'Stats',     icon: BarChart2       },
+  { to: '/ranking',   label: 'Ranking',   icon: Trophy          },
   { to: '/contact',   label: 'Contato',   icon: Mail            },
 ];
 

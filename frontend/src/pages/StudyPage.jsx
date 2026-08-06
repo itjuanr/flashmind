@@ -6,6 +6,8 @@ import { useToast } from '../context/ToastContext';
 import { useTheme } from '../context/ThemeContext';
 import { ZoomableImage } from '../components/ImageZoom';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
+import Modal from '../components/ui/Modal';
+import Button from '../components/ui/Button';
 import {
   ArrowLeft, RotateCcw, CheckCircle2, XCircle, X,
   RefreshCw, LayoutDashboard, Loader2, BookOpen,
@@ -583,12 +585,13 @@ export default function StudyPage() {
 
       {/* Modal de edição inline */}
       {editingCard && (
-        <div className="fixed inset-0 bg-black/75 z-[60] flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-[#0F0F18] rounded-3xl border border-white/10 flex flex-col" style={{ maxHeight: '90vh' }}>
+        <Modal onClose={() => setEditingCard(null)} size="md" className="z-[60]">
+          <div className="flex flex-col" style={{ maxHeight: '88vh' }}>
             {/* Header fixo */}
-            <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-white/8 flex-shrink-0">
-              <h3 className="text-white font-bold">Editar card</h3>
-              <button onClick={() => setEditingCard(null)} className="text-slate-500 hover:text-white transition-colors">
+            <div className={`flex items-center justify-between px-6 pt-6 pb-4 border-b flex-shrink-0 ${isDark ? 'border-white/8' : 'border-black/6'}`}>
+              <h3 className={`font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>Editar card</h3>
+              <button type="button" onClick={() => setEditingCard(null)} aria-label="Fechar"
+                className="text-slate-500 hover:text-white transition-colors">
                 <X size={18} />
               </button>
             </div>
@@ -617,12 +620,11 @@ export default function StudyPage() {
               )}
             </div>
             {/* Footer fixo */}
-            <div className="flex gap-3 px-6 pb-6 pt-4 border-t border-white/8 flex-shrink-0">
-              <button onClick={() => setEditingCard(null)}
-                className="flex-1 bg-white/5 border border-white/8 text-slate-400 font-semibold py-2.5 rounded-xl text-sm transition-all hover:bg-white/10">
+            <div className={`flex flex-col-reverse sm:flex-row gap-3 px-6 pb-6 pt-4 border-t flex-shrink-0 ${isDark ? 'border-white/8' : 'border-black/6'}`}>
+              <Button variant="secondary" size="lg" fullWidth onClick={() => setEditingCard(null)}>
                 Cancelar
-              </button>
-              <button onClick={async () => {
+              </Button>
+              <Button variant="primary" size="lg" fullWidth onClick={async () => {
                 try {
                   const res = await api.put(`/flashcards/${editingCard._id}`, {
                     front: editingCard.front,
@@ -631,12 +633,12 @@ export default function StudyPage() {
                   });
                   handleEditSaved(res.data);
                 } catch { toast('Erro ao salvar.', 'error'); }
-              }} className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-semibold py-2.5 rounded-xl text-sm transition-all">
+              }}>
                 Salvar
-              </button>
+              </Button>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
 
       {!focusMode && <Navbar />}

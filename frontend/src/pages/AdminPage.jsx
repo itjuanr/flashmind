@@ -168,13 +168,11 @@ export default function AdminPage() {
                 {lista.usuarios.map((u) => (
                   <button key={u._id} onClick={() => abrirUsuario(u._id)}
                     className={`w-full text-left rounded-xl border p-4 flex items-center gap-4 transition-all ${cardCls} ${isDark ? 'hover:border-white/15' : 'hover:border-black/15'}`}>
-                    {u.avatar ? (
-                      <img src={u.avatar} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
-                    ) : (
-                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
-                        {u.name?.[0]?.toUpperCase() || '?'}
-                      </div>
-                    )}
+                    {/* Iniciais na lista: o avatar é base64 e não vem no
+                        payload da listagem, justamente para não inflá-la. */}
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                      {u.name?.[0]?.toUpperCase() || '?'}
+                    </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <p className={`font-semibold text-sm truncate ${isDark ? 'text-white' : 'text-slate-800'}`}>{u.name}</p>

@@ -19,4 +19,7 @@ const noteSchema = new mongoose.Schema({
 // Índice para busca por texto
 noteSchema.index({ title: 'text', content: 'text' });
 
+// Listagem de aulas de uma matéria (getNotes filtra por subjectId + userId).
+noteSchema.index({ userId: 1, subjectId: 1, date: -1 });
+
 module.exports = mongoose.model('Note', noteSchema);

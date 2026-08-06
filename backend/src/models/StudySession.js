@@ -17,4 +17,10 @@ const StudySessionSchema = new mongoose.Schema({
   },
 }, { timestamps: true });
 
+// Stats e ranking agregam sessões por usuário numa janela de tempo — é a
+// consulta mais pesada do app, e sem índice varre tudo.
+StudySessionSchema.index({ userId: 1, studiedAt: -1 });
+StudySessionSchema.index({ studiedAt: -1 });
+StudySessionSchema.index({ deckId: 1 });
+
 module.exports = mongoose.model('StudySession', StudySessionSchema);

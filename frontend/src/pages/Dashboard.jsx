@@ -381,26 +381,30 @@ function DeckModal({ onClose, onSaved, editing, toast }) {
 
 // ─── Onboarding (primeiro acesso) ─────────────────────────────────────────────
 function OnboardingModal({ onClose, onCreateFirst }) {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+
   return (
-    <div className="fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-sm bg-[#0F0F18] rounded-3xl border border-white/10 p-8 text-center">
+    <Modal onClose={onClose} size="sm">
+      <div className="p-6 sm:p-8 text-center">
         <div className="text-5xl mb-4">🧠</div>
-        <h2 className="text-white font-bold text-xl mb-2">Bem-vindo ao FlashMind!</h2>
-        <p className="text-slate-400 text-sm mb-8 leading-relaxed">
+        <h2 className={`font-bold text-xl mb-2 ${isDark ? 'text-white' : 'text-slate-800'}`}>
+          Bem-vindo ao FlashMind!
+        </h2>
+        <p className="text-slate-500 text-sm mb-8 leading-relaxed">
           Organize seu estudo com flashcards inteligentes.<br />
           Crie seu primeiro deck para começar.
         </p>
         <div className="space-y-3">
-          <button onClick={onCreateFirst}
-            className="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 text-sm">
-            <Sparkles size={16} /> Criar meu primeiro deck
-          </button>
-          <button onClick={onClose} className="w-full text-slate-500 hover:text-slate-300 text-sm py-2 transition-colors">
+          <Button variant="primary" size="lg" fullWidth icon={Sparkles} onClick={onCreateFirst}>
+            Criar meu primeiro deck
+          </Button>
+          <Button variant="ghost" size="md" fullWidth onClick={onClose}>
             Explorar primeiro
-          </button>
+          </Button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }
 
