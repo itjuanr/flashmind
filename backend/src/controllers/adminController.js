@@ -1,4 +1,5 @@
 const crypto    = require('crypto');
+const { gerarToken, hashToken } = require('../utils/tokens');
 const bcrypt    = require('bcryptjs');
 const User      = require('../models/User');
 const { sendPasswordResetEmail, sendEmailChangeConfirmation, sendEmailChangeNotice } = require('../config/email');
@@ -7,12 +8,32 @@ const Flashcard = require('../models/Flashcard');
 const Subject   = require('../models/Subject');
 const Note      = require('../models/Note');
 const StudySession = require('../models/StudySession');
+const AdminLog  = require('../models/AdminLog');
+
+/**
+ * Registra a acao sem deixar que uma falha de log derrube a operacao ja
+ * concluida — mas avisa alto no console se falhar, porque perder trilha de
+ * auditoria e um problema por si so.
+ */
+async function auditar(req, { acao, alvo, detalhe }) {
+  try {
+    await AdminLog.create({
+      autorId: req.user.id, autorEmail: req.user.email,
+      acao,
+      alvoId: alvo?._id, alvoEmail: alvo?.email,
+      detalhe: detalhe || '',
+      ip: req.ip || '',
+    });
+  } catch (e) {
+    console.error('[AUDITORIA] FALHA ao registrar', acao, e.message);
+  }
+}
 
 // Projeção única para qualquer leitura de usuário nesta área.
 // `password` já é select:false no schema, mas os tokens NÃO são — sem excluí-los
 // aqui, um admin (ou um log) veria tokens ativos de reset e de troca de e-mail,
 // que permitem sequestrar a conta alheia. pendingEmail idem, é dado sensível.
-const SAFE_USER = '-password -verifyToken -verifyTokenExpires -resetToken -resetTokenExpires -emailChangeToken -emailChangeExpires';
+const SAFE_USER = '-password -verifyToken -verifyTokenExpires -resetToken -resetTokenExpires -emailChangeToken -emailChangeExpires -emailChangeCancelToken';
 
 // Na listagem o avatar sai fora: é um data URI de até ~2,8MB por usuário, e
 // 20 por página significaria dezenas de MB numa resposta só. A lista mostra
@@ -164,8 +185,7 @@ exports.setUserRole = async (req, res) => {
     alvo.role = role;
     await alvo.save();
 
-    // Trilha de auditoria: mudança de privilégio precisa ficar registrada.
-    console.log(`[ADMIN] ${req.user.email} alterou ${alvo.email}: ${anterior} -> ${role}`);
+    await auditar(req, { acao: 'cargo', alvo, detalhe: `${anterior} -> ${role}` });
 
     res.json({ message: `Cargo alterado para ${role}.`, role: alvo.role });
   } catch (e) {
@@ -182,12 +202,12 @@ exports.triggerPasswordReset = async (req, res) => {
     const alvo = await User.findById(req.params.id);
     if (!alvo) return res.status(404).json({ message: 'Usuário não encontrado.' });
 
-    const token = crypto.randomBytes(32).toString('hex');
-    alvo.resetToken        = token;
+    const token = gerarToken();
+    alvo.resetToken        = hashToken(token);
     alvo.resetTokenExpires = new Date(Date.now() + 60 * 60 * 1000);
     await alvo.save();
 
-    console.log(`[ADMIN] ${req.user.email} disparou reset de senha para ${alvo.email}`);
+    await auditar(req, { acao: 'reset-senha', alvo });
     res.json({ message: `Link de redefinição enviado para ${alvo.email}.` });
 
     setImmediate(() => {
@@ -237,16 +257,16 @@ exports.adminChangeEmail = async (req, res) => {
     // Isto é uma SOLICITAÇÃO, não uma troca. O admin não tem como concluí-la:
     // o e-mail só muda quando o link enviado ao novo endereço for aberto, e o
     // endereço antigo pode vetar a qualquer momento até lá.
-    const token = crypto.randomBytes(32).toString('hex');
-    const cancelToken = crypto.randomBytes(32).toString('hex');
+    const token = gerarToken();
+    const cancelToken = gerarToken();
     alvo.pendingEmail           = newEmail;
-    alvo.emailChangeToken       = token;
+    alvo.emailChangeToken       = hashToken(token);
     alvo.emailChangeExpires     = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h: suporte leva tempo
-    alvo.emailChangeCancelToken = cancelToken;
+    alvo.emailChangeCancelToken = hashToken(cancelToken);
     alvo.emailChangeRequestedBy = req.user.email;
     await alvo.save();
 
-    console.log(`[ADMIN] ${req.user.email} solicitou troca de e-mail de ${alvo.email} para ${newEmail}`);
+    await auditar(req, { acao: 'troca-email', alvo, detalhe: `-> ${newEmail}` });
     res.json({
       message: `Solicitação aberta. Confirmação enviada para ${newEmail} e aviso com opção de cancelar para ${alvo.email}.`,
       pendingEmail: newEmail,
@@ -281,5 +301,18 @@ exports.getDeckDetail = async (req, res) => {
     res.json({ deck, dono, cards });
   } catch (e) {
     res.status(500).json({ message: 'Erro ao carregar deck.' });
+  }
+};
+
+// GET /api/admin/logs
+// Leitura liberada para TI: transparência sobre o que a equipe fez ajuda mais
+// do que esconder — e o log não contém segredo nenhum.
+exports.getLogs = async (req, res) => {
+  try {
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 50));
+    const logs = await AdminLog.find().sort({ createdAt: -1 }).limit(limit).lean();
+    res.json(logs);
+  } catch (e) {
+    res.status(500).json({ message: 'Erro ao carregar o histórico.' });
   }
 };

@@ -13,6 +13,20 @@ function getResend() {
 const FROM = 'FlashMind <juanrodrigues@flashmind.site>';
 
 /**
+ * Escapa dados do usuário antes de entrarem no HTML do e-mail.
+ * O `sanitize` do cadastro remove caracteres de controle, mas não `<` e `>`:
+ * um nome com marcação quebraria o layout da mensagem e abriria espaço para
+ * conteúdo enganoso dentro de um e-mail que parece legítimo.
+ */
+const esc = (v) =>
+  String(v ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+/**
  * Versão em texto puro. Clientes que não renderizam HTML (e vários filtros de
  * spam) só olham para isto — sem alternativa em texto, a mensagem chega vazia
  * ou perde pontuação de reputação.
@@ -91,7 +105,7 @@ exports.sendConfirmationEmail = async (user, token) => {
         Confirme seu e-mail ✉️
       </h2>
       <p style="margin:0 0 28px;font-size:14px;color:#94a3b8;line-height:1.7;">
-        Olá, <strong style="color:#e2e8f0;">${user.name}</strong>!<br>
+        Olá, <strong style="color:#e2e8f0;">${esc(user.name)}</strong>!<br>
         Obrigado por criar sua conta no FlashMind. Clique no botão abaixo para confirmar seu e-mail.
       </p>
       <a href="${link}" style="display:inline-block;background:#2563eb;color:#ffffff;font-weight:700;font-size:14px;padding:14px 32px;border-radius:12px;text-decoration:none;">
@@ -125,7 +139,7 @@ exports.sendPasswordResetEmail = async (user, token) => {
         Redefinir senha 🔑
       </h2>
       <p style="margin:0 0 28px;font-size:14px;color:#94a3b8;line-height:1.7;">
-        Olá, <strong style="color:#e2e8f0;">${user.name}</strong>!<br>
+        Olá, <strong style="color:#e2e8f0;">${esc(user.name)}</strong>!<br>
         Recebemos uma solicitação para redefinir a senha da sua conta FlashMind.
       </p>
       <a href="${link}" style="display:inline-block;background:#2563eb;color:#ffffff;font-weight:700;font-size:14px;padding:14px 32px;border-radius:12px;text-decoration:none;">
@@ -167,9 +181,9 @@ exports.sendEmailChangeConfirmation = async (user, newEmail, token) => {
         Confirme seu novo e-mail 🔄
       </h2>
       <p style="margin:0 0 28px;font-size:14px;color:#94a3b8;line-height:1.7;">
-        Olá, <strong style="color:#e2e8f0;">${user.name}</strong>!<br>
+        Olá, <strong style="color:#e2e8f0;">${esc(user.name)}</strong>!<br>
         Você pediu para trocar o e-mail da sua conta FlashMind para
-        <strong style="color:#e2e8f0;">${newEmail}</strong>.
+        <strong style="color:#e2e8f0;">${esc(newEmail)}</strong>.
         Confirme abaixo para concluir a troca.
       </p>
       <a href="${link}" style="display:inline-block;background:#2563eb;color:#ffffff;font-weight:700;font-size:14px;padding:14px 32px;border-radius:12px;text-decoration:none;">
@@ -219,10 +233,10 @@ exports.sendEmailChangeNotice = async (user, newEmail, cancelToken, autor = null
         Pediram para trocar seu e-mail ⚠️
       </h2>
       <p style="margin:0 0 20px;font-size:14px;color:#94a3b8;line-height:1.7;">
-        Olá, <strong style="color:#e2e8f0;">${user.name}</strong>.<br>
+        Olá, <strong style="color:#e2e8f0;">${esc(user.name)}</strong>.<br>
         Recebemos um pedido para mudar o e-mail da sua conta para
-        <strong style="color:#e2e8f0;">${newEmail}</strong>.<br>
-        <span style="font-size:12px;color:#64748b;">${origem}</span>
+        <strong style="color:#e2e8f0;">${esc(newEmail)}</strong>.<br>
+        <span style="font-size:12px;color:#64748b;">${esc(origem)}</span>
       </p>
       ${cancelLink ? `
       <a href="${cancelLink}" style="display:inline-block;background:#dc2626;color:#ffffff;font-weight:700;font-size:14px;padding:14px 32px;border-radius:12px;text-decoration:none;margin-bottom:20px;">

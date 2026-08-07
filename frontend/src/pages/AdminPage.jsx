@@ -59,6 +59,7 @@ export default function AdminPage() {
   const [lista, setLista]     = useState({ usuarios: [], total: 0, pages: 1 });
   const [carregando, setCarregando] = useState(true);
 
+  const [logs, setLogs] = useState([]);
   const [detalhe, setDetalhe] = useState(null);
   const [deckAberto, setDeckAberto] = useState(null);
 
@@ -67,6 +68,9 @@ export default function AdminPage() {
       .then((r) => setStats(r.data))
       // 404 é a resposta proposital para quem não é admin — não confirma que a área existe.
       .catch((e) => { if (e.response?.status === 404) setNegado(true); });
+    api.get('/admin/logs', { params: { limit: 15 } })
+      .then((r) => setLogs(r.data))
+      .catch(() => {});
   }, []);
 
   const carregarUsuarios = useCallback(async () => {
@@ -224,6 +228,31 @@ export default function AdminPage() {
                     </div>
                   </button>
                 ))}
+              </div>
+            )}
+
+            {logs.length > 0 && (
+              <div className="mt-10">
+                <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">
+                  Histórico da equipe
+                </h2>
+                <div className="space-y-2">
+                  {logs.map((l) => (
+                    <div key={l._id} className={`rounded-lg border p-3 flex items-center gap-3 text-xs ${cardCls}`}>
+                      <span className={`font-bold px-1.5 py-0.5 rounded uppercase tracking-wide flex-shrink-0 ${
+                        l.acao === 'cargo' ? 'bg-blue-500/15 text-blue-400'
+                        : l.acao === 'troca-email' ? 'bg-amber-500/15 text-amber-400'
+                        : 'bg-violet-500/15 text-violet-400'}`}>
+                        {l.acao}
+                      </span>
+                      <p className="min-w-0 flex-1 truncate text-slate-500">
+                        <span className={isDark ? 'text-slate-300' : 'text-slate-700'}>{l.autorEmail}</span>
+                        {' → '}{l.alvoEmail}{l.detalhe ? ` (${l.detalhe})` : ''}
+                      </p>
+                      <span className="text-slate-600 flex-shrink-0 whitespace-nowrap">{fmtData(l.createdAt)}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 

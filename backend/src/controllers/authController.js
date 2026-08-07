@@ -1,6 +1,7 @@
 const jwt    = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
+const { gerarToken, hashToken } = require('../utils/tokens');
 const User   = require('../models/User');
 const {
   sendConfirmationEmail, sendPasswordResetEmail,
@@ -53,12 +54,13 @@ exports.register = async (req, res) => {
     if (exists) return res.status(400).json({ message: 'Este e-mail já está cadastrado.' });
 
     const hashed      = await bcrypt.hash(password, 10);
-    const verifyToken = crypto.randomBytes(32).toString('hex');
+    const verifyToken = gerarToken();
 
     const user = await User.create({
       name, email, password: hashed,
       studyGoal, studyArea, howFound,
-      verifyToken,
+      // Grava o resumo; o link no e-mail leva o valor original.
+      verifyToken: hashToken(verifyToken),
       verifyTokenExpires: new Date(Date.now() + 24 * 60 * 60 * 1000),
     });
 
@@ -190,12 +192,12 @@ exports.requestEmailChange = async (req, res) => {
     const taken = await User.findOne({ email: newEmail });
     if (taken) return res.status(400).json({ message: 'Este e-mail já está em uso.' });
 
-    const token = crypto.randomBytes(32).toString('hex');
-    const cancelToken = crypto.randomBytes(32).toString('hex');
+    const token = gerarToken();
+    const cancelToken = gerarToken();
     user.pendingEmail           = newEmail;
-    user.emailChangeToken       = token;
+    user.emailChangeToken       = hashToken(token);
     user.emailChangeExpires     = new Date(Date.now() + 60 * 60 * 1000);
-    user.emailChangeCancelToken = cancelToken;
+    user.emailChangeCancelToken = hashToken(cancelToken);
     user.emailChangeRequestedBy = null; // pedido pelo próprio dono
     await user.save();
 
@@ -222,7 +224,7 @@ exports.cancelEmailChange = async (req, res) => {
     if (!/^[a-f0-9]{64}$/.test(req.params.token))
       return res.status(400).json({ message: 'Token inválido.' });
 
-    const user = await User.findOne({ emailChangeCancelToken: req.params.token });
+    const user = await User.findOne({ emailChangeCancelToken: hashToken(req.params.token) });
     if (!user || !user.pendingEmail)
       return res.status(400).json({ message: 'Esta solicitação não existe mais ou já foi resolvida.' });
 
@@ -247,7 +249,7 @@ exports.confirmEmailChange = async (req, res) => {
       return res.status(400).json({ message: 'Token inválido.' });
 
     const user = await User.findOne({
-      emailChangeToken: req.params.token,
+      emailChangeToken: hashToken(req.params.token),
       emailChangeExpires: { $gt: new Date() },
     });
     if (!user || !user.pendingEmail)
@@ -287,7 +289,7 @@ exports.verifyEmail = async (req, res) => {
       return res.status(400).json({ message: 'Token inválido.' });
 
     // Busca apenas pelo token — sem filtrar pela expiração primeiro
-    const user = await User.findOne({ verifyToken: token });
+    const user = await User.findOne({ verifyToken: hashToken(token) });
 
     if (!user) {
       // Verifica se já foi verificado anteriormente (token foi consumido)
@@ -326,8 +328,8 @@ exports.forgotPassword = async (req, res) => {
     const user = await User.findOne({ email: new RegExp(`^${email}$`, 'i') });
     if (!user) return res.json({ message: SAFE_MSG });
 
-    const token = crypto.randomBytes(32).toString('hex');
-    user.resetToken        = token;
+    const token = gerarToken();
+    user.resetToken        = hashToken(token);
     user.resetTokenExpires = new Date(Date.now() + 60 * 60 * 1000);
     await user.save();
 
@@ -354,7 +356,7 @@ exports.resetPassword = async (req, res) => {
       return res.status(400).json({ message: 'A nova senha deve ter no mínimo 8 caracteres, contendo letras maiúsculas, minúsculas, números e símbolos.' });
 
     const user = await User.findOne({
-      resetToken: req.params.token,
+      resetToken: hashToken(req.params.token),
       resetTokenExpires: { $gt: new Date() },
     }).select('+password');
     if (!user) return res.status(400).json({ message: 'Link inválido ou expirado. Solicite um novo.' });
@@ -384,8 +386,8 @@ exports.resendVerification = async (req, res) => {
       return res.status(429).json({ message: 'Aguarde 1 minuto antes de solicitar outro e-mail.' });
     }
 
-    const token = crypto.randomBytes(32).toString('hex');
-    user.verifyToken        = token;
+    const token = gerarToken();
+    user.verifyToken        = hashToken(token);
     user.verifyTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
     await user.save();
 

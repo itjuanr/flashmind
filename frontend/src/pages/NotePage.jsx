@@ -9,7 +9,31 @@ import {
   Bold, Italic, List, ListOrdered, Heading2, Heading3,
   Undo2, Redo2, Quote, Code, Minus,
 } from 'lucide-react';
+import DOMPurify from 'dompurify';
 import api from '../services/api';
+
+// Só o que a barra de ferramentas realmente produz. Uma lista fechada é mais
+// segura que tentar bloquear o que é perigoso: o que não está aqui não passa.
+const TAGS_PERMITIDAS = [
+  'p', 'br', 'div', 'span', 'b', 'strong', 'i', 'em', 'u', 's',
+  'h1', 'h2', 'h3', 'h4', 'ul', 'ol', 'li', 'blockquote', 'pre', 'code', 'hr', 'a',
+];
+
+/**
+ * O conteúdo da aula é HTML gravado pelo editor e reinjetado via innerHTML.
+ * Sem sanitizar, marcação com script sobrevive no banco e executa ao abrir a
+ * aula — e como o token de sessão fica no localStorage, isso vira sequestro
+ * de conta. Hoje só o dono vê a própria aula, mas isso muda no dia em que
+ * aulas forem compartilháveis, como as matérias já são.
+ */
+function limpar(html) {
+  return DOMPurify.sanitize(html || '', {
+    ALLOWED_TAGS: TAGS_PERMITIDAS,
+    ALLOWED_ATTR: ['href', 'target', 'rel'],
+    // Bloqueia javascript: e data: em href
+    ALLOWED_URI_REGEXP: /^(?:https?|mailto):/i,
+  });
+}
 
 // ── Editor rico (contenteditable) ─────────────────────────────────────────────
 function RichEditor({ value, onChange, isDark, placeholder }) {
@@ -20,7 +44,7 @@ function RichEditor({ value, onChange, isDark, placeholder }) {
   // Inicializa o conteúdo só uma vez
   useEffect(() => {
     if (editorRef.current && !initialized.current) {
-      editorRef.current.innerHTML = value || '';
+      editorRef.current.innerHTML = limpar(value);
       initialized.current = true;
     }
   }, [value]);
@@ -33,7 +57,9 @@ function RichEditor({ value, onChange, isDark, placeholder }) {
 
   const emitChange = () => {
     if (!editorRef.current || isComposing.current) return;
-    onChange(editorRef.current.innerHTML);
+    // Limpa também na saída: colar de outro site traz marcação arbitrária,
+    // e assim nada sujo chega a ser gravado.
+    onChange(limpar(editorRef.current.innerHTML));
   };
 
   const btn = (title, action, icon) => {

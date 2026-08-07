@@ -3,7 +3,7 @@ const router  = express.Router();
 const { protect, adminOnly, staffOnly } = require('../middleware/authMiddleware');
 const {
   getStats, listUsers, getUserDetail, getDeckDetail, setUserRole,
-  triggerPasswordReset, adminChangeEmail,
+  triggerPasswordReset, adminChangeEmail, getLogs,
 } = require('../controllers/adminController');
 
 // Piso da área: sessão válida + cargo de equipe (admin ou TI).
@@ -16,6 +16,7 @@ router.get('/stats',          getStats);
 router.get('/users',          listUsers);
 router.get('/users/:id',      getUserDetail);
 router.get('/decks/:id',      getDeckDetail);
+router.get('/logs',           getLogs);
 
 // Suporte — admin e TI. Disparar o reset não dá poder a quem dispara: o link
 // vai para o e-mail do próprio usuário.
