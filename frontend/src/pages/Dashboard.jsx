@@ -1034,7 +1034,7 @@ export default function Dashboard() {
                         <div className="absolute -top-8 -right-8 w-28 h-28 rounded-full opacity-10 blur-2xl group-hover:opacity-20 transition-opacity pointer-events-none" style={{ backgroundColor: deck.color || '#3B82F6' }} />
                         <div className="absolute inset-0 rounded-2xl cursor-pointer z-0" onClick={() => navigate(`/deck/${deck._id}`)} />
                         <div draggable onDragStart={(e) => handleDragStart(e, deck._id)} onDragEnd={handleDragEnd} onClick={(e) => e.stopPropagation()}
-                          title="Arraste para a fila" className="absolute top-3 left-3 z-20 p-1.5 rounded-lg cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity text-slate-500 hover:text-blue-400 hover:bg-blue-500/10">
+                          title="Arraste para a fila" className="absolute top-3 left-3 z-20 p-1.5 rounded-lg cursor-grab active:cursor-grabbing hover-reveal text-slate-500 hover:text-blue-400 hover:bg-blue-500/10">
                           <GripVertical size={14} />
                         </div>
                         {studyQueue.includes(deck._id) && (
@@ -1059,7 +1059,7 @@ export default function Dashboard() {
                               )}
                             </div>
                           </div>
-                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-2">
+                          <div className="flex items-center gap-1 hover-reveal flex-shrink-0 ml-2">
                             <button onClick={() => handleFavoriteDeck(deck._id)} className={`p-2 rounded-lg transition-all ${deck.isFavorite ? 'text-amber-400 hover:bg-amber-500/10' : 'text-slate-500 hover:text-amber-400 hover:bg-amber-500/10'}`}><Star size={14} fill={deck.isFavorite ? 'currentColor' : 'none'} /></button>
                             <button onClick={() => handleClone(deck)} title="Duplicar deck" className="p-2 rounded-lg text-slate-500 hover:text-blue-400 hover:bg-blue-500/10 transition-all"><Files size={14} /></button>
                             <button onClick={() => { setEditing(deck); setShowModal(true); }} className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-white/10 transition-all"><Pencil size={14} /></button>

@@ -290,7 +290,7 @@ export default function NotebookPage() {
               const open = () => navigate(`/notebook/${subject._id}`);
 
               const actions = (
-                <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                <div className="flex items-center gap-1 flex-shrink-0 hover-reveal">
                   <button title="Editar matéria" onClick={(e) => { e.stopPropagation(); setEditingSubject(subject); setShowSubjectModal(true); }}
                     className={`p-2 rounded-lg text-slate-500 transition-all ${isDark ? 'hover:text-white hover:bg-white/10' : 'hover:text-slate-800 hover:bg-black/6'}`}>
                     <Pencil size={14} />

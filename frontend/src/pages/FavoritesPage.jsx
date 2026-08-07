@@ -216,7 +216,7 @@ export default function FavoritesPage() {
                             {deck.description && <p className="text-slate-500 text-xs mt-0.5 line-clamp-1">{deck.description}</p>}
                           </div>
                         </div>
-                        <button onClick={(e) => { e.stopPropagation(); handleUnfavoriteDeck(deck._id); }} className="relative z-10 p-1.5 rounded-lg text-amber-400 hover:bg-amber-500/10 transition-colors opacity-0 group-hover:opacity-100" title="Remover dos favoritos">
+                        <button onClick={(e) => { e.stopPropagation(); handleUnfavoriteDeck(deck._id); }} className="relative z-10 p-1.5 rounded-lg text-amber-400 hover:bg-amber-500/10 transition-colors hover-reveal" title="Remover dos favoritos">
                           <Star size={13} fill="currentColor" />
                         </button>
                       </div>

@@ -217,7 +217,7 @@ function AttachmentsPanel({ noteId, attachments, setAttachments, isDark, toast }
                   <p className={`text-xs truncate ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>{att.name || att.url}</p>
                   <p className="text-[10px] text-slate-500 capitalize">{att.type}</p>
                 </div>
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex items-center gap-1 hover-reveal">
                   {att.url && (
                     <a href={att.url} target="_blank" rel="noopener noreferrer"
                       className="p-1.5 rounded-lg text-slate-500 hover:text-blue-400 transition-all"><Link2 size={12}/></a>

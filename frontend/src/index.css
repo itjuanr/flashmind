@@ -137,6 +137,32 @@ select:focus-visible,
   outline-offset: 2px;
 }
 
+/* ── Ações reveladas no hover ──
+   Editar, excluir, favoritar e afins ficavam com opacity-0 até o hover. Em
+   tela de toque não existe hover, então esses botões nunca apareciam e a ação
+   era simplesmente inacessível no celular.
+
+   Aqui o padrão é o inverso: visível por default, e só escondido em ponteiro
+   fino com hover real (mouse). Quem usa toque vê sempre. */
+.hover-reveal { opacity: 1; }
+
+@media (hover: hover) and (pointer: fine) {
+  .hover-reveal {
+    opacity: 0;
+    transition: opacity 0.15s ease-out;
+  }
+  .group:hover .hover-reveal,
+  .hover-reveal:hover,
+  .hover-reveal:focus-within,
+  .hover-reveal:focus-visible {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hover-reveal { transition: none; }
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }

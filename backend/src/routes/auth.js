@@ -4,7 +4,7 @@ const { protect } = require('../middleware/authMiddleware');
 const {
   register, login, getMe, updateMe,
   verifyEmail, forgotPassword, resetPassword, resendVerification,
-  changePassword, requestEmailChange, confirmEmailChange,
+  changePassword, requestEmailChange, confirmEmailChange, cancelEmailChange,
 } = require('../controllers/authController');
 
 router.post('/register',             register);
@@ -21,5 +21,7 @@ router.post('/resend-verification',  protect, resendVerification);
 router.post('/change-password',                protect, changePassword);
 router.post('/change-email',                   protect, requestEmailChange);
 router.get('/confirm-email-change/:token',              confirmEmailChange);
+// Veto sem login: quem precisa cancelar pode estar sem acesso à conta.
+router.get('/cancel-email-change/:token',               cancelEmailChange);
 
 module.exports = router;

@@ -7,8 +7,9 @@ import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import {
   Loader2, Search, Users, Layers, BookOpen, FolderOpen, ShieldCheck,
-  ChevronLeft, ChevronRight, X, Mail, Calendar, ArrowLeft,
+  ChevronLeft, ChevronRight, X, Mail, Calendar, ArrowLeft, KeyRound, Clock,
 } from 'lucide-react';
+import ConfirmDialog from '../components/ui/ConfirmDialog';
 import api from '../services/api';
 
 const fmtData = (d) => (d ? new Date(d).toLocaleDateString('pt-BR') : '—');
@@ -46,6 +47,10 @@ export default function AdminPage() {
 
   const [cargoModal, setCargoModal] = useState(null); // { alvo, role, senha }
   const [salvandoCargo, setSalvandoCargo] = useState(false);
+  const [emailModal, setEmailModal] = useState(null); // { alvo, novoEmail, senha }
+  const [salvandoEmail, setSalvandoEmail] = useState(false);
+  const [confirmReset, setConfirmReset] = useState(null);
+  const [enviandoReset, setEnviandoReset] = useState(false);
 
   const [stats, setStats]     = useState(null);
   const [negado, setNegado]   = useState(false);
@@ -101,6 +106,32 @@ export default function AdminPage() {
     } catch (err) {
       toast(err.response?.data?.message || 'Erro ao alterar cargo.', 'error');
     } finally { setSalvandoCargo(false); }
+  };
+
+  const dispararReset = async () => {
+    setEnviandoReset(true);
+    try {
+      const r = await api.post(`/admin/users/${confirmReset._id}/reset-password`);
+      toast(r.data.message, 'success');
+      setConfirmReset(null);
+    } catch (err) {
+      toast(err.response?.data?.message || 'Erro ao disparar redefinição.', 'error');
+    } finally { setEnviandoReset(false); }
+  };
+
+  const salvarEmail = async (e) => {
+    e.preventDefault();
+    setSalvandoEmail(true);
+    try {
+      const r = await api.post(`/admin/users/${emailModal.alvo._id}/change-email`, {
+        newEmail: emailModal.novoEmail, password: emailModal.senha,
+      });
+      toast(r.data.message, 'success');
+      setDetalhe((d) => (d ? { ...d, user: { ...d.user, pendingEmail: r.data.pendingEmail } } : d));
+      setEmailModal(null);
+    } catch (err) {
+      toast(err.response?.data?.message || 'Erro ao solicitar troca.', 'error');
+    } finally { setSalvandoEmail(false); }
   };
 
   const abrirDeck = async (id) => {
@@ -241,11 +272,34 @@ export default function AdminPage() {
 
                 {/* Só admin promove. Um TI vê a tela, mas não este botão — e,
                     se forçar a chamada, o adminOnly da rota barra. */}
+              </div>
+
+              {detalhe.user.pendingEmail && (
+                <div className="flex items-start gap-3 px-4 py-3 rounded-lg border border-amber-500/25 bg-amber-500/10 mt-4">
+                  <Clock size={15} className="text-amber-400 flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-amber-400/90 leading-relaxed break-all">
+                    Solicitação pendente para <strong className="font-semibold">{detalhe.user.pendingEmail}</strong>.
+                    Só se aplica quando o usuário abrir o link; o endereço atual pode cancelar.
+                  </p>
+                </div>
+              )}
+
+              <div className="flex flex-wrap gap-2 mt-4">
+                <Button variant="secondary" size="md" icon={KeyRound}
+                  onClick={() => setConfirmReset(detalhe.user)}>
+                  Enviar reset de senha
+                </Button>
                 {souAdmin && detalhe.user._id !== eu?.id && (
-                  <Button variant="secondary" size="md" icon={ShieldCheck} className="flex-shrink-0 self-start"
-                    onClick={() => setCargoModal({ alvo: detalhe.user, role: detalhe.user.role || 'user', senha: '' })}>
-                    Alterar cargo
-                  </Button>
+                  <>
+                    <Button variant="secondary" size="md" icon={Mail}
+                      onClick={() => setEmailModal({ alvo: detalhe.user, novoEmail: '', senha: '' })}>
+                      Solicitar troca de e-mail
+                    </Button>
+                    <Button variant="secondary" size="md" icon={ShieldCheck}
+                      onClick={() => setCargoModal({ alvo: detalhe.user, role: detalhe.user.role || 'user', senha: '' })}>
+                      Alterar cargo
+                    </Button>
+                  </>
                 )}
               </div>
             </div>
@@ -276,6 +330,67 @@ export default function AdminPage() {
           </>
         )}
       </main>
+
+      {confirmReset && (
+        <ConfirmDialog
+          emoji="🔑"
+          title="Enviar reset de senha?"
+          confirmLabel="Enviar link"
+          loadingLabel="Enviando..."
+          tone="primary"
+          loading={enviandoReset}
+          onCancel={() => setConfirmReset(null)}
+          onConfirm={dispararReset}
+        >
+          O link vai para <span className={`font-medium ${isDark ? 'text-white' : 'text-slate-800'}`}>{confirmReset.email}</span>,
+          o próprio endereço do usuário. A senha atual continua valendo até ele concluir a redefinição.
+        </ConfirmDialog>
+      )}
+
+      {emailModal && (
+        <Modal onClose={() => !salvandoEmail && setEmailModal(null)} size="sm" dismissable={!salvandoEmail}>
+          <form onSubmit={salvarEmail} className="p-6 sm:p-8">
+            <h3 className={`font-bold text-lg mb-1 ${isDark ? 'text-white' : 'text-slate-800'}`}>Solicitar troca de e-mail</h3>
+            <p className="text-slate-500 text-sm mb-5 break-all">{emailModal.alvo.name} · {emailModal.alvo.email}</p>
+
+            <div className="rounded-lg border border-amber-500/25 bg-amber-500/10 px-4 py-3 mb-5">
+              <p className="text-xs text-amber-400/90 leading-relaxed">
+                Isto <strong className="font-semibold">não troca o e-mail</strong>: abre uma solicitação.
+                Ela só se aplica quando o link enviado ao novo endereço for aberto — e o endereço atual
+                recebe um aviso com opção de cancelar, identificando você como autor.
+              </p>
+            </div>
+
+            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2" htmlFor="admin-novo-email">
+              Novo e-mail
+            </label>
+            <input id="admin-novo-email" type="email" required placeholder="novo@email.com"
+              value={emailModal.novoEmail}
+              onChange={(e) => setEmailModal((m) => ({ ...m, novoEmail: e.target.value }))}
+              className={`w-full border px-4 py-3 rounded-lg outline-none transition-all text-sm mb-4 ${
+                isDark ? 'bg-white/4 border-white/8 focus:border-blue-500/50 text-white'
+                       : 'bg-black/3 border-black/8 focus:border-blue-500/50 text-slate-800'}`} />
+
+            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2" htmlFor="admin-senha-email">
+              Confirme com a sua senha
+            </label>
+            <input id="admin-senha-email" type="password" required autoComplete="current-password"
+              value={emailModal.senha}
+              onChange={(e) => setEmailModal((m) => ({ ...m, senha: e.target.value }))}
+              className={`w-full border px-4 py-3 rounded-lg outline-none transition-all text-sm mb-5 ${
+                isDark ? 'bg-white/4 border-white/8 focus:border-blue-500/50 text-white'
+                       : 'bg-black/3 border-black/8 focus:border-blue-500/50 text-slate-800'}`} />
+
+            <div className="flex flex-col-reverse sm:flex-row gap-3">
+              <Button type="button" variant="secondary" size="lg" fullWidth
+                disabled={salvandoEmail} onClick={() => setEmailModal(null)}>Cancelar</Button>
+              <Button type="submit" variant="primary" size="lg" fullWidth loading={salvandoEmail}>
+                Abrir solicitação
+              </Button>
+            </div>
+          </form>
+        </Modal>
+      )}
 
       {cargoModal && (
         <Modal onClose={() => !salvandoCargo && setCargoModal(null)} size="sm" dismissable={!salvandoCargo}>

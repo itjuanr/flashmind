@@ -35,6 +35,12 @@ const UserSchema = new mongoose.Schema({
   pendingEmail:       { type: String, default: null },
   emailChangeToken:   { type: String, default: null },
   emailChangeExpires: { type: Date,   default: null },
+  // Veto: token enviado ao endereço ANTIGO, que mata a solicitação na hora.
+  // É a defesa contra uma troca que o dono não pediu — inclusive uma aberta
+  // por um administrador.
+  emailChangeCancelToken: { type: String, default: null },
+  // Auditoria: quem abriu a solicitação. null = o próprio usuário.
+  emailChangeRequestedBy: { type: String, default: null },
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', UserSchema);

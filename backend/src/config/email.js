@@ -191,23 +191,28 @@ exports.sendEmailChangeConfirmation = async (user, newEmail, token) => {
 
 // Aviso ao endereço ANTIGO. Se a troca não foi o usuário, é por aqui que ele
 // descobre a tempo — mandar só para o novo endereço esconderia o sequestro.
-exports.sendEmailChangeNotice = async (user, newEmail) => {
+exports.sendEmailChangeNotice = async (user, newEmail, cancelToken, autor = null) => {
   const resend = getResend();
+  const cancelLink = cancelToken ? `${BASE_URL}/cancelar-troca-email/${cancelToken}` : null;
+  const origem = autor
+    ? `Esta solicitação foi aberta pela equipe do FlashMind (${autor}), normalmente a pedido de suporte.`
+    : 'Esta solicitação foi aberta a partir da sua conta.';
   await resend.emails.send({
     from: FROM,
     to: user.email,
     subject: '⚠️ Solicitação de troca de e-mail — FlashMind',
-    // Sem link de ação: este aviso não deve induzir clique. Se a conta foi
-    // tomada, mandar o alvo clicar em algo é o oposto do que se quer.
     text: [
       'FlashMind — Pediram para trocar seu e-mail',
       '',
       `Olá, ${user.name}.`,
       `Recebemos um pedido para mudar o e-mail da sua conta para ${newEmail}.`,
+      origem,
       '',
-      'NÃO FOI VOCÊ? Troque sua senha imediatamente — alguém pode ter acesso',
-      'à sua conta. A troca só se conclui se o link enviado ao novo endereço',
-      'for aberto.',
+      'NÃO FOI VOCÊ?',
+      cancelLink ? `Cancele agora: ${cancelLink}` : 'Troque sua senha imediatamente.',
+      'O cancelamento é imediato e não exige login.',
+      '',
+      'A troca só se conclui se o link enviado ao novo endereço for aberto.',
     ].join('\n'),
     html: emailBase(`
       <h2 style="margin:0 0 12px;font-size:24px;font-weight:900;color:#ffffff;letter-spacing:-0.5px;">
@@ -216,8 +221,16 @@ exports.sendEmailChangeNotice = async (user, newEmail) => {
       <p style="margin:0 0 20px;font-size:14px;color:#94a3b8;line-height:1.7;">
         Olá, <strong style="color:#e2e8f0;">${user.name}</strong>.<br>
         Recebemos um pedido para mudar o e-mail da sua conta para
-        <strong style="color:#e2e8f0;">${newEmail}</strong>.
+        <strong style="color:#e2e8f0;">${newEmail}</strong>.<br>
+        <span style="font-size:12px;color:#64748b;">${origem}</span>
       </p>
+      ${cancelLink ? `
+      <a href="${cancelLink}" style="display:inline-block;background:#dc2626;color:#ffffff;font-weight:700;font-size:14px;padding:14px 32px;border-radius:12px;text-decoration:none;margin-bottom:20px;">
+        Não fui eu — cancelar agora
+      </a>
+      <p style="margin:0 0 20px;font-size:12px;color:#475569;">
+        O cancelamento é imediato e não exige login.
+      </p>` : ''}
       <table cellpadding="0" cellspacing="0">
         <tr>
           <td style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:10px;padding:14px 18px;">

@@ -32,6 +32,7 @@ const ProfilePage        = lazy(() => import('./pages/ProfilePage'));
 const AdminPage          = lazy(() => import('./pages/AdminPage'));
 const RankingPage        = lazy(() => import('./pages/RankingPage'));
 const ConfirmEmailChangePage = lazy(() => import('./pages/ConfirmEmailChangePage'));
+const CancelEmailChangePage  = lazy(() => import('./pages/CancelEmailChangePage'));
 
 function PageFallback() {
   return (
@@ -59,6 +60,8 @@ export default function App() {
                 {/* Pública: o link chega por e-mail e pode ser aberto em outro
                     navegador, sem sessão ativa. */}
                 <Route path="/confirm-email-change/:token" element={<ConfirmEmailChangePage />} />
+                {/* Veto sem login: quem cancela pode estar sem acesso à conta. */}
+                <Route path="/cancelar-troca-email/:token" element={<CancelEmailChangePage />} />
                 {/* Estática antes da dinâmica: /share/subject/:token não pode
                     ser lido como um token de deck chamado "subject". */}
                 <Route path="/share/subject/:token"      element={<SharedSubjectPage />} />

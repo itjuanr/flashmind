@@ -1,4 +1,7 @@
+const crypto    = require('crypto');
+const bcrypt    = require('bcryptjs');
 const User      = require('../models/User');
+const { sendPasswordResetEmail, sendEmailChangeConfirmation, sendEmailChangeNotice } = require('../config/email');
 const Deck      = require('../models/Deck');
 const Flashcard = require('../models/Flashcard');
 const Subject   = require('../models/Subject');
@@ -167,6 +170,99 @@ exports.setUserRole = async (req, res) => {
     res.json({ message: `Cargo alterado para ${role}.`, role: alvo.role });
   } catch (e) {
     res.status(500).json({ message: 'Erro ao alterar cargo.' });
+  }
+};
+
+// POST /api/admin/users/:id/reset-password
+// Dispara o fluxo normal de "esqueci minha senha" para o usuário.
+// Liberado para TI: é a ação clássica de suporte e não dá poder a quem dispara
+// — o link vai para o e-mail do próprio usuário e o token nunca é exposto aqui.
+exports.triggerPasswordReset = async (req, res) => {
+  try {
+    const alvo = await User.findById(req.params.id);
+    if (!alvo) return res.status(404).json({ message: 'Usuário não encontrado.' });
+
+    const token = crypto.randomBytes(32).toString('hex');
+    alvo.resetToken        = token;
+    alvo.resetTokenExpires = new Date(Date.now() + 60 * 60 * 1000);
+    await alvo.save();
+
+    console.log(`[ADMIN] ${req.user.email} disparou reset de senha para ${alvo.email}`);
+    res.json({ message: `Link de redefinição enviado para ${alvo.email}.` });
+
+    setImmediate(() => {
+      sendPasswordResetEmail(alvo, token)
+        .catch((e) => console.error('Erro ao enviar reset (admin):', e.message));
+    });
+  } catch (e) {
+    res.status(500).json({ message: 'Erro ao disparar redefinição.' });
+  }
+};
+
+// POST /api/admin/users/:id/change-email   { newEmail, password }
+// Exclusivo de admin. Não troca o e-mail direto: deixa pendente até o dono
+// confirmar pelo link, exatamente como na troca feita pelo próprio usuário.
+exports.adminChangeEmail = async (req, res) => {
+  try {
+    const password = typeof req.body.password === 'string' ? req.body.password : '';
+    const newEmail = typeof req.body.newEmail === 'string'
+      ? req.body.newEmail.replace(/[\x00-\x1F\x7F]/g, '').trim().toLowerCase().slice(0, 200) : '';
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail))
+      return res.status(400).json({ message: 'E-mail inválido.' });
+
+    // Trocar e-mail é a via mais curta para tomar uma conta: aponte para um
+    // endereço seu, confirme e peça reset. A senha do admin impede que uma
+    // sessão sequestrada faça isso sozinha.
+    const requisitante = await User.findById(req.user.id).select('+password');
+    if (!requisitante) return res.status(401).json({ message: 'Não autorizado.' });
+    if (!(await bcrypt.compare(password, requisitante.password)))
+      return res.status(400).json({ message: 'Senha incorreta.' });
+
+    const alvo = await User.findById(req.params.id);
+    if (!alvo) return res.status(404).json({ message: 'Usuário não encontrado.' });
+
+    // Contas de admin ficam fora: são as de maior valor, e permitir que um
+    // admin redirecione o e-mail de outro transforma qualquer comprometimento
+    // em escalada para o sistema inteiro.
+    if (alvo.role === 'admin' && alvo._id.toString() !== req.user.id)
+      return res.status(400).json({ message: 'Não é possível alterar o e-mail de outro administrador.' });
+
+    if (newEmail === alvo.email)
+      return res.status(400).json({ message: 'Este já é o e-mail do usuário.' });
+
+    const taken = await User.findOne({ email: newEmail, _id: { $ne: alvo._id } });
+    if (taken) return res.status(400).json({ message: 'Este e-mail já está em uso.' });
+
+    // Isto é uma SOLICITAÇÃO, não uma troca. O admin não tem como concluí-la:
+    // o e-mail só muda quando o link enviado ao novo endereço for aberto, e o
+    // endereço antigo pode vetar a qualquer momento até lá.
+    const token = crypto.randomBytes(32).toString('hex');
+    const cancelToken = crypto.randomBytes(32).toString('hex');
+    alvo.pendingEmail           = newEmail;
+    alvo.emailChangeToken       = token;
+    alvo.emailChangeExpires     = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h: suporte leva tempo
+    alvo.emailChangeCancelToken = cancelToken;
+    alvo.emailChangeRequestedBy = req.user.email;
+    await alvo.save();
+
+    console.log(`[ADMIN] ${req.user.email} solicitou troca de e-mail de ${alvo.email} para ${newEmail}`);
+    res.json({
+      message: `Solicitação aberta. Confirmação enviada para ${newEmail} e aviso com opção de cancelar para ${alvo.email}.`,
+      pendingEmail: newEmail,
+    });
+
+    const enderecoAntigo = alvo.email;
+    setImmediate(() => {
+      sendEmailChangeConfirmation(alvo, newEmail, token)
+        .catch((e) => console.error('Erro ao enviar confirmação (admin):', e.message));
+      // Aviso com veto ao endereço antigo, identificando QUEM abriu o pedido.
+      // É o que impede um admin de trocar o e-mail de alguém em silêncio.
+      sendEmailChangeNotice({ name: alvo.name, email: enderecoAntigo }, newEmail, cancelToken, req.user.email)
+        .catch((e) => console.error('Erro ao avisar e-mail antigo (admin):', e.message));
+    });
+  } catch (e) {
+    res.status(500).json({ message: 'Erro ao solicitar troca de e-mail.' });
   }
 };
 

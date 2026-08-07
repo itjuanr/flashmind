@@ -82,7 +82,7 @@ export default function FlashCard({ card, onFavorite, onEdit, onDuplicate, onDel
       )}
 
       {/* Botões de ação */}
-      <div className="absolute top-3 right-3 z-20 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="absolute top-3 right-3 z-20 flex items-center gap-1 hover-reveal">
         {/* Indicador de nível — não exibe quando é Novo */}
         {showLevel && (
           <span className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-semibold uppercase tracking-wide ${lvl.text} opacity-60`}>

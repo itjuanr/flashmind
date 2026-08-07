@@ -372,12 +372,14 @@ export default function SubjectPage() {
           <ChevronLeft size={16} className="group-hover:-translate-x-0.5 transition-transform"/> Caderno
         </button>
 
-        {/* Header — empilha no mobile. Em linha, os 3 botões nao-encolhiveis
-            espremiam o titulo ate a largura zero e ele quebrava letra a letra. */}
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-8">
-          <div className="flex items-start gap-3 sm:gap-4 min-w-0 flex-1">
-            <span className="text-4xl sm:text-5xl flex-shrink-0">{subject?.emoji || '📓'}</span>
-            <div className="min-w-0">
+        {/* Header em duas faixas: título ocupa a largura toda, ações vêm
+            abaixo. O container é max-w-3xl em qualquer tela, então lado a lado
+            os 3 botões deixavam ~215px para o nome — estreito demais, e nomes
+            longos quebravam no meio da palavra. */}
+        <div className="mb-8">
+          <div className="flex items-start gap-3 sm:gap-4 min-w-0 mb-5">
+            <span className="text-4xl sm:text-5xl flex-shrink-0 leading-none">{subject?.emoji || '📓'}</span>
+            <div className="min-w-0 flex-1">
               <h1 className={`text-2xl sm:text-3xl font-bold tracking-tight break-words ${isDark ? 'text-white' : 'text-slate-900'}`}>
                 {subject?.name || 'Matéria'}
               </h1>
@@ -397,7 +399,7 @@ export default function SubjectPage() {
               )}
             </div>
           </div>
-          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap sm:flex-shrink-0 w-full sm:w-auto">
+          <div className="flex items-center gap-2 flex-wrap sm:justify-end">
             {subjectId !== 'unassigned' && (
               <button
                 onClick={() => (shareToken ? setShowShareModal(true) : handleToggleShare())}
@@ -493,7 +495,7 @@ export default function SubjectPage() {
                       {note.attachments?.length > 0 && (<span className={`text-[10px] px-1.5 py-0.5 rounded-full ml-1 ${isDark ? 'bg-white/5 text-slate-500' : 'bg-black/5 text-slate-400'}`}>{note.attachments.length} anexo{note.attachments.length > 1 ? 's' : ''}</span>)}
                     </div>
                   </div>
-                  <button onClick={e => { e.stopPropagation(); setConfirmDelete(note); }} className="p-2 rounded-lg opacity-0 group-hover:opacity-100 text-slate-600 hover:text-red-400 hover:bg-red-500/10 transition-all"><Trash2 size={14}/></button>
+                  <button onClick={e => { e.stopPropagation(); setConfirmDelete(note); }} className="p-2 rounded-lg hover-reveal text-slate-600 hover:text-red-400 hover:bg-red-500/10 transition-all"><Trash2 size={14}/></button>
                 </div>
               ))}
               {search && filtered.length === 0 && (<p className="text-center text-slate-500 text-sm py-8">Nenhuma aula encontrada para "{search}"</p>)}
@@ -524,7 +526,7 @@ export default function SubjectPage() {
                       </div>
                     </div>
                     {/* Botão de Editar */}
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-2 z-10">
+                    <div className="flex items-center gap-1 hover-reveal flex-shrink-0 ml-2 z-10">
                       <button onClick={(e) => { e.stopPropagation(); setEditingDeck(deck); setShowDeckModal(true); }}
                         className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-white/10 transition-all">
                         <Pencil size={14} />

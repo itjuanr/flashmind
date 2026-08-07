@@ -77,27 +77,31 @@ export default function Navbar() {
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50">
-      <nav className={`mx-4 mt-4 ${navBg} rounded-2xl border ${navBorder} px-5 py-3 flex items-center justify-between shadow-lg`}>
+      {/* max-w-7xl impede a barra de atravessar telas largas de ponta a ponta */}
+      <nav className={`mx-3 sm:mx-4 mt-3 sm:mt-4 max-w-7xl xl:mx-auto ${navBg} rounded-2xl border ${navBorder} px-3 sm:px-5 py-2.5 flex items-center justify-between gap-2 shadow-lg`}>
 
         {/* Logo */}
         <Link to="/dashboard" className="flex items-center gap-2 group flex-shrink-0">
-          <img src="https://i.imgur.com/jXDsNEh.png" alt="FlashMind Logo" className="w-12 h-12 object-contain" />
+          <img src="https://i.imgur.com/jXDsNEh.png" alt="FlashMind Logo" className="w-10 h-10 object-contain" />
           <span className={`font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-800'}`}>
             Flash<span className="text-blue-400">Mind</span>
           </span>
         </Link>
 
-        {/* Links Desktop */}
-        <div className="hidden md:flex items-center gap-1">
+        {/* Links — só a partir de lg. Antes apareciam em md (768px), onde os
+            7 itens somados ao logo e aos controles não cabiam e a barra
+            estourava. Entre lg e xl ficam só os ícones; o rótulo entra no xl. */}
+        <div className="hidden lg:flex items-center gap-0.5 xl:gap-1 min-w-0">
           {navLinks.map(({ to, label, icon: Icon }) => {
             const active = location.pathname === to || location.pathname.startsWith(to + '/');
             return (
-              <Link key={to} to={to}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+              <Link key={to} to={to} title={label}
+                className={`flex items-center gap-1.5 px-2.5 xl:px-3.5 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap ${
                   active ? 'bg-blue-500/15 text-blue-400'
                   : isDark ? 'text-slate-400 hover:text-white hover:bg-white/8' : 'text-slate-500 hover:text-slate-900 hover:bg-black/6'
                 }`}>
-                <Icon size={15} /> {label}
+                <Icon size={15} className="flex-shrink-0" />
+                <span className="hidden xl:inline">{label}</span>
               </Link>
             );
           })}
@@ -189,7 +193,7 @@ export default function Navbar() {
           </button>
 
           {/* Avatar + Dropdown (desktop) */}
-          <div ref={dropdownRef} className="relative hidden md:block">
+          <div ref={dropdownRef} className="relative hidden lg:block">
             <button onClick={() => setDropdownOpen((v) => !v)}
               className={`flex items-center gap-2 px-3 py-2 rounded-xl transition-colors ${isDark ? 'hover:bg-white/8' : 'hover:bg-black/6'}`}>
               {user?.avatar ? (
@@ -229,7 +233,7 @@ export default function Navbar() {
 
           {/* Hamburger mobile */}
           <button
-            className={`md:hidden p-2 rounded-xl transition-colors ${isDark ? 'text-slate-400 hover:text-white hover:bg-white/8' : 'text-slate-500 hover:text-slate-900 hover:bg-black/6'}`}
+            className={`lg:hidden p-2 rounded-xl transition-colors ${isDark ? 'text-slate-400 hover:text-white hover:bg-white/8' : 'text-slate-500 hover:text-slate-900 hover:bg-black/6'}`}
             onClick={() => setMobileOpen((v) => !v)}>
             {mobileOpen ? <X size={22} /> : <Menu size={22} />}
           </button>
@@ -238,7 +242,7 @@ export default function Navbar() {
 
       {/* ── Menu mobile ── */}
       {mobileOpen && (
-        <div className={`md:hidden mx-4 mt-1 ${mobileBg} rounded-2xl border ${navBorder} p-3 flex flex-col gap-1 shadow-2xl`}>
+        <div className={`lg:hidden mx-3 sm:mx-4 mt-1 max-w-7xl xl:mx-auto ${mobileBg} rounded-2xl border ${navBorder} p-3 flex flex-col gap-1 shadow-2xl`}>
           <div className={`flex items-center gap-3 px-3 py-3 mb-1 rounded-xl ${isDark ? 'bg-white/4' : 'bg-black/3'}`}>
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
               {initials}

@@ -191,9 +191,12 @@ exports.requestEmailChange = async (req, res) => {
     if (taken) return res.status(400).json({ message: 'Este e-mail já está em uso.' });
 
     const token = crypto.randomBytes(32).toString('hex');
-    user.pendingEmail       = newEmail;
-    user.emailChangeToken   = token;
-    user.emailChangeExpires = new Date(Date.now() + 60 * 60 * 1000);
+    const cancelToken = crypto.randomBytes(32).toString('hex');
+    user.pendingEmail           = newEmail;
+    user.emailChangeToken       = token;
+    user.emailChangeExpires     = new Date(Date.now() + 60 * 60 * 1000);
+    user.emailChangeCancelToken = cancelToken;
+    user.emailChangeRequestedBy = null; // pedido pelo próprio dono
     await user.save();
 
     res.json({ message: `Enviamos um link de confirmação para ${newEmail}.`, pendingEmail: newEmail });
@@ -202,11 +205,39 @@ exports.requestEmailChange = async (req, res) => {
     setImmediate(() => {
       sendEmailChangeConfirmation(user, newEmail, token)
         .catch(e => console.error('Erro ao enviar confirmação de troca:', e.message));
-      // Aviso ao endereço antigo — é a rede de segurança se a conta foi tomada.
-      sendEmailChangeNotice({ name: user.name, email: oldAddress }, newEmail)
+      // Aviso ao endereço antigo, com link de veto — é a rede de segurança
+      // se a conta foi tomada.
+      sendEmailChangeNotice({ name: user.name, email: oldAddress }, newEmail, cancelToken)
         .catch(e => console.error('Erro ao avisar e-mail antigo:', e.message));
     });
   } catch (e) { res.status(500).json({ message: 'Erro ao solicitar troca de e-mail.' }); }
+};
+
+// ── GET /api/auth/cancel-email-change/:token ─────────────────────────────────
+// Veto do endereço ANTIGO. Público e sem login de propósito: quem precisa
+// cancelar pode estar justamente sem acesso à conta. Mata a solicitação e
+// invalida o link de confirmação já enviado ao novo endereço.
+exports.cancelEmailChange = async (req, res) => {
+  try {
+    if (!/^[a-f0-9]{64}$/.test(req.params.token))
+      return res.status(400).json({ message: 'Token inválido.' });
+
+    const user = await User.findOne({ emailChangeCancelToken: req.params.token });
+    if (!user || !user.pendingEmail)
+      return res.status(400).json({ message: 'Esta solicitação não existe mais ou já foi resolvida.' });
+
+    user.pendingEmail           = undefined;
+    user.emailChangeToken       = undefined;
+    user.emailChangeExpires     = undefined;
+    user.emailChangeCancelToken = undefined;
+    user.emailChangeRequestedBy = undefined;
+    await user.save();
+
+    console.log(`[SEGURANCA] Troca de e-mail cancelada pelo endereco antigo: ${user.email}`);
+    res.json({ message: 'Solicitação cancelada. Seu e-mail continua o mesmo.' });
+  } catch (e) {
+    res.status(500).json({ message: 'Erro ao cancelar a solicitação.' });
+  }
 };
 
 // ── GET /api/auth/confirm-email-change/:token ────────────────────────────────
@@ -235,9 +266,11 @@ exports.confirmEmailChange = async (req, res) => {
 
     user.email       = user.pendingEmail;
     user.isVerified  = true; // o clique no link já provou a posse do endereço
-    user.pendingEmail       = undefined;
-    user.emailChangeToken   = undefined;
-    user.emailChangeExpires = undefined;
+    user.pendingEmail           = undefined;
+    user.emailChangeToken       = undefined;
+    user.emailChangeExpires     = undefined;
+    user.emailChangeCancelToken = undefined;
+    user.emailChangeRequestedBy = undefined;
     await user.save();
 
     res.json({ message: 'E-mail alterado com sucesso!', email: user.email });
