@@ -10,6 +10,7 @@ import {
   Image, Check, Bell, Pencil, Share2, Copy,
 } from 'lucide-react';
 import api from '../services/api';
+import { comprimirImagem } from '../utils/imagem';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import Modal from '../components/ui/Modal';
 import Button from '../components/ui/Button';
@@ -44,7 +45,7 @@ function DeckModal({ onClose, onSaved, editing, toast, isDark }) {
   const emojis = ['📚', '🧬', '🌍', '💻', '🎯', '🔬', '🏛️', '✏️', '🎨', '🚀'];
   const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
 
-  const handleFile = (e) => {
+  const handleFile = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
     if (file.size > 2 * 1024 * 1024) {
@@ -53,9 +54,11 @@ function DeckModal({ onClose, onSaved, editing, toast, isDark }) {
       return;
     }
     setError('');
-    const reader = new FileReader();
-    reader.onload = () => setForm((f) => ({ ...f, deckImage: reader.result }));
-    reader.readAsDataURL(file);
+    try {
+      // Comprime antes: o callback do setForm nao e async.
+      const img = await comprimirImagem(file, { maxLado: 512 });
+      setForm((f) => ({ ...f, deckImage: img }));
+    } catch { setError('Não foi possível processar essa imagem.'); }
   };
 
   const addTag = () => {

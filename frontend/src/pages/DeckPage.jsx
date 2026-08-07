@@ -13,6 +13,7 @@ import {
   Trash2 as TrashIcon, Download, FileUp, Search, History, FileArchive,
   CheckCircle2, XCircle, Clock, LayoutGrid, MoreVertical, Copy, FileText, Folder,
 } from 'lucide-react';
+import { comprimirImagem } from '../utils/imagem';
 import CsvImportModal from '../components/CsvImportModal';
 import AudioPicker from '../components/AudioPicker';
 
@@ -22,7 +23,7 @@ function ImagePicker({ value, onChange, label, onError }) {
   const [urlInput, setUrlInput] = useState(value && !value.startsWith('data:') ? value : '');
   const fileRef = useRef();
 
-  const handleFile = (e) => {
+  const handleFile = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
     if (file.size > 2 * 1024 * 1024) {
@@ -30,9 +31,8 @@ function ImagePicker({ value, onChange, label, onError }) {
       e.target.value = '';
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => onChange(reader.result);
-    reader.readAsDataURL(file);
+    try { onChange(await comprimirImagem(file, { maxLado: 1024 })); }
+    catch { onError?.('Não foi possível processar essa imagem.'); }
   };
 
   const clear = () => { setUrlInput(''); onChange(null); if (fileRef.current) fileRef.current.value = ''; };

@@ -6,6 +6,7 @@ import Navbar from '../components/Navbar';
 import Button from '../components/ui/Button';
 import { User, Mail, Lock, Camera, Trash2, Check, ShieldCheck, Clock } from 'lucide-react';
 import api from '../services/api';
+import { comprimirImagem } from '../utils/imagem';
 
 function Section({ icon: Icon, title, description, children, isDark }) {
   return (
@@ -54,23 +55,22 @@ export default function ProfilePage() {
     : '?';
 
   // ── Foto ──
-  const handleFile = (e) => {
+  const handleFile = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 2 * 1024 * 1024) { toast('Imagem muito grande. Use uma de até 2MB.', 'error'); return; }
 
-    const reader = new FileReader();
-    reader.onload = async () => {
-      setUploading(true);
-      try {
-        const res = await api.patch('/auth/me', { avatar: reader.result });
-        updateUser({ avatar: res.data.avatar });
-        toast('Foto atualizada!', 'success');
-      } catch (err) {
-        toast(err.response?.data?.message || 'Erro ao enviar foto.', 'error');
-      } finally { setUploading(false); }
-    };
-    reader.readAsDataURL(file);
+    setUploading(true);
+    try {
+      // Avatar aparece pequeno em qualquer lugar do app: 256px basta e derruba
+      // o peso do data URI em uma ordem de grandeza.
+      const avatar = await comprimirImagem(file, { maxLado: 256 });
+      const res = await api.patch('/auth/me', { avatar });
+      updateUser({ avatar: res.data.avatar });
+      toast('Foto atualizada!', 'success');
+    } catch (err) {
+      toast(err.response?.data?.message || 'Erro ao enviar foto.', 'error');
+    } finally { setUploading(false); }
   };
 
   const removeAvatar = async () => {

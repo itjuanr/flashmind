@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import { comprimirImagem } from '../utils/imagem';
 import Navbar from '../components/Navbar';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import Modal from '../components/ui/Modal';
@@ -135,7 +136,7 @@ function DeckModal({ onClose, onSaved, editing, toast, subjects = [] }) {
   const emojis = ['📚', '🧬', '🌍', '💻', '🎯', '🔬', '🏛️', '✏️', '🎨', '🚀'];
   const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
 
-  const handleFile = (e) => {
+  const handleFile = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
     if (file.size > 2 * 1024 * 1024) {
@@ -144,9 +145,11 @@ function DeckModal({ onClose, onSaved, editing, toast, subjects = [] }) {
       return;
     }
     setError('');
-    const reader = new FileReader();
-    reader.onload = () => setForm((f) => ({ ...f, deckImage: reader.result }));
-    reader.readAsDataURL(file);
+    try {
+      // Comprime antes: o callback do setForm nao e async.
+      const img = await comprimirImagem(file, { maxLado: 512 });
+      setForm((f) => ({ ...f, deckImage: img }));
+    } catch { setError('Não foi possível processar essa imagem.'); }
   };
 
   const addTag = () => {
