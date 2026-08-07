@@ -31,6 +31,7 @@ const ResetPasswordPage  = lazy(() => import('./pages/ResetPasswordPage'));
 const ProfilePage        = lazy(() => import('./pages/ProfilePage'));
 const AdminPage          = lazy(() => import('./pages/AdminPage'));
 const RankingPage        = lazy(() => import('./pages/RankingPage'));
+const TrashPage          = lazy(() => import('./pages/TrashPage'));
 const ConfirmEmailChangePage = lazy(() => import('./pages/ConfirmEmailChangePage'));
 const CancelEmailChangePage  = lazy(() => import('./pages/CancelEmailChangePage'));
 
@@ -85,6 +86,7 @@ export default function App() {
                 <Route path="/favorites"  element={<PrivateRoute><FavoritesPage /></PrivateRoute>} />
                 <Route path="/stats"      element={<PrivateRoute><StatsPage /></PrivateRoute>} />
                 <Route path="/ranking"    element={<PrivateRoute><RankingPage /></PrivateRoute>} />
+                <Route path="/trash"      element={<PrivateRoute><TrashPage /></PrivateRoute>} />
                 <Route path="/profile"    element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
                 {/* Rota comum de propósito: o bundle é público e esconder o
                     caminho não protege. Quem não é admin recebe 404 da API e

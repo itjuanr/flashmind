@@ -728,6 +728,13 @@ export default function Dashboard() {
             <h1 className="text-3xl font-bold text-white tracking-tight">Seus decks</h1>
           </div>
           <div className="flex items-center gap-2 self-start sm:self-auto">
+            <button
+              onClick={() => navigate('/trash')}
+              title="Decks excluídos"
+              className={`p-3 rounded-xl border transition-all flex items-center justify-center ${isDark ? 'bg-white/5 border-white/8 hover:bg-white/10 text-slate-400 hover:text-white' : 'bg-black/4 border-black/8 hover:bg-black/8 text-slate-500 hover:text-slate-800'}`}>
+              <Trash2 size={17} />
+            </button>
+
             {/* Popover de Atalhos */}
             <div className="relative">
               <button
