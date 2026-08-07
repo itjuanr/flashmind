@@ -87,12 +87,14 @@ exports.deleteSubject = async (req, res) => {
   try {
     const userId = req.user.id;
     
-    const subject = await Subject.findOneAndDelete({ _id: req.params.id, userId });
+    const subject = await Subject.findOne({ _id: req.params.id, userId });
     if (!subject) return res.status(404).json({ message: 'Matéria não encontrada.' });
-    
-    // Apaga todas as notas da matéria
-    await Note.deleteMany({ subjectId: req.params.id });
-    res.json({ message: 'Matéria e aulas removidas.' });
+
+    // Exclusão reversível: as aulas ficam intactas. Antes eram apagadas em
+    // massa junto com a matéria, sem nenhuma forma de recuperar.
+    subject.deletedAt = new Date();
+    await subject.save();
+    res.json({ message: 'Matéria movida para a lixeira.' });
   } catch (e) { res.status(500).json({ message: e.message }); }
 };
 
@@ -293,4 +295,42 @@ exports.cloneSharedSubject = async (req, res) => {
     console.error('cloneSharedSubject error:', e.message);
     res.status(500).json({ message: 'Erro ao clonar matéria compartilhada.' });
   }
+};
+
+// GET /api/notebook/subjects/trash
+exports.getSubjectTrash = async (req, res) => {
+  try {
+    const materias = await Subject.find({ userId: req.user.id, deletedAt: { $ne: null } })
+      .sort({ deletedAt: -1 }).lean();
+    const ids = materias.map((m) => m._id);
+    const notas = ids.length
+      ? await Note.aggregate([{ $match: { subjectId: { $in: ids } } }, { $group: { _id: '$subjectId', total: { $sum: 1 } } }])
+      : [];
+    const mapa = new Map(notas.map((n) => [n._id.toString(), n.total]));
+    res.json(materias.map((m) => ({ ...m, noteCount: mapa.get(m._id.toString()) || 0 })));
+  } catch (e) { res.status(500).json({ message: 'Erro ao carregar a lixeira.' }); }
+};
+
+// POST /api/notebook/subjects/:id/restore
+exports.restoreSubject = async (req, res) => {
+  try {
+    const s = await Subject.findOne({ _id: req.params.id, userId: req.user.id, deletedAt: { $ne: null } });
+    if (!s) return res.status(404).json({ message: 'Matéria não encontrada na lixeira.' });
+    s.deletedAt = null;
+    await s.save();
+    res.json({ message: 'Matéria restaurada.' });
+  } catch (e) { res.status(500).json({ message: 'Erro ao restaurar matéria.' }); }
+};
+
+// DELETE /api/notebook/subjects/:id/permanent
+exports.purgeSubject = async (req, res) => {
+  try {
+    const s = await Subject.findOne({ _id: req.params.id, userId: req.user.id, deletedAt: { $ne: null } });
+    if (!s) return res.status(404).json({ message: 'Matéria não encontrada na lixeira.' });
+    await Note.deleteMany({ subjectId: s._id });
+    // Decks apenas perdem o vinculo — sao entidades proprias e continuam valendo.
+    await Deck.updateMany({ subjectId: s._id }, { $set: { subjectId: null } });
+    await s.deleteOne();
+    res.json({ message: 'Matéria excluída definitivamente.' });
+  } catch (e) { res.status(500).json({ message: 'Erro ao excluir definitivamente.' }); }
 };

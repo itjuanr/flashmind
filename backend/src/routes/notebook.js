@@ -4,6 +4,7 @@ const { protect } = require('../middleware/authMiddleware');
 const {
   getSubjects, createSubject, updateSubject, deleteSubject, getSubjectById,
   getDecksBySubject, toggleSubjectShare, getSharedSubject, cloneSharedSubject,
+  getSubjectTrash, restoreSubject, purgeSubject,
 } = require('../controllers/subjectController');
 const {
   getNotes, getNote, createNote, updateNote, deleteNote,
@@ -22,6 +23,10 @@ router.post('/subjects/share/:token/clone', cloneSharedSubject);
 
 // Matérias
 router.get('/subjects',          getSubjects);
+// Antes de '/subjects/:id', senao "trash" seria lido como um id.
+router.get('/subjects/trash',    getSubjectTrash);
+router.post('/subjects/:id/restore',    restoreSubject);
+router.delete('/subjects/:id/permanent', purgeSubject);
 router.post('/subjects',         createSubject);
 router.get('/subjects/:id',      getSubjectById);
 router.put('/subjects/:id',      updateSubject);
