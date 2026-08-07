@@ -111,12 +111,11 @@ function SearchableSelect({ options, value, onChange, placeholder, icon: Icon, i
 }
 
 // ─── Modal: Criar / Editar Deck ────────────────────────────────────────────────
-function DeckModal({ onClose, onSaved, editing, toast }) {
+function DeckModal({ onClose, onSaved, editing, toast, subjects = [] }) {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const fileRef = useRef();
   const tagInputRef = useRef();
-  const [subjects, setSubjects] = useState([]);
 
   const [form, setForm] = useState({
     name:        editing?.name        || '',
@@ -133,19 +132,18 @@ function DeckModal({ onClose, onSaved, editing, toast }) {
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState('');
 
-  useEffect(() => {
-    api.get('/notebook/subjects')
-      .then(res => setSubjects(res.data))
-      .catch(() => {}); // Erro silencioso, o campo simplesmente não aparece
-  }, []);
-
   const emojis = ['📚', '🧬', '🌍', '💻', '🎯', '🔬', '🏛️', '✏️', '🎨', '🚀'];
   const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
 
   const handleFile = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) { alert('Imagem até 2MB.'); return; }
+    if (file.size > 2 * 1024 * 1024) {
+      setError('Imagem muito grande. Use uma de até 2MB.');
+      e.target.value = ''; // permite reescolher o mesmo arquivo depois
+      return;
+    }
+    setError('');
     const reader = new FileReader();
     reader.onload = () => setForm((f) => ({ ...f, deckImage: reader.result }));
     reader.readAsDataURL(file);
@@ -418,6 +416,9 @@ export default function Dashboard() {
   const isDark = theme === 'dark';
 
   // Estado principal
+  // Carregadas aqui, e nao dentro do modal: buscar na abertura fazia o modal
+  // aparecer e so depois "crescer" com o campo de materia.
+  const [subjects, setSubjects]     = useState([]);
   const [decks, setDecks]           = useState([]);
   const [loading, setLoading]       = useState(true);
   const [stats, setStats]           = useState({ decksStudiedToday: 0, accuracy: null, dueTotal: 0, cardsStudiedToday: 0 });
@@ -451,6 +452,14 @@ export default function Dashboard() {
   const [queueOpen, setQueueOpen]         = useState(false);
   const [draggingId, setDraggingId]       = useState(null);
   const [dragOverQueue, setDragOverQueue] = useState(false);
+
+  // Matérias em paralelo com os decks: quando o usuário clica em "Criar deck",
+  // a lista já está pronta e o modal abre completo.
+  useEffect(() => {
+    api.get('/notebook/subjects')
+      .then((res) => setSubjects(res.data))
+      .catch(() => {}); // silencioso: sem matérias, o campo apenas não aparece
+  }, []);
 
   useEffect(() => {
     api.get('/decks')
@@ -678,7 +687,7 @@ export default function Dashboard() {
       )}
 
       {/* Modal criar/editar */}
-      {showModal && <DeckModal onClose={closeModal} onSaved={handleSaved} editing={editing} toast={toast} />}
+      {showModal && <DeckModal onClose={closeModal} onSaved={handleSaved} editing={editing} toast={toast} subjects={subjects} />}
 
       {/* Modal confirmar reset */}
       {confirmReset && (

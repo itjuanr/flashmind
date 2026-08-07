@@ -17,7 +17,7 @@ import CsvImportModal from '../components/CsvImportModal';
 import AudioPicker from '../components/AudioPicker';
 
 // ─── ImagePicker ──────────────────────────────────────────────────────────────
-function ImagePicker({ value, onChange, label }) {
+function ImagePicker({ value, onChange, label, onError }) {
   const [mode, setMode] = useState(value ? (value.startsWith('data:') ? 'upload' : 'url') : 'url');
   const [urlInput, setUrlInput] = useState(value && !value.startsWith('data:') ? value : '');
   const fileRef = useRef();
@@ -25,7 +25,11 @@ function ImagePicker({ value, onChange, label }) {
   const handleFile = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) { alert('Imagem muito grande. Use uma imagem menor que 2MB.'); return; }
+    if (file.size > 2 * 1024 * 1024) {
+      onError?.('Imagem muito grande. Use uma de até 2MB.');
+      e.target.value = '';
+      return;
+    }
     const reader = new FileReader();
     reader.onload = () => onChange(reader.result);
     reader.readAsDataURL(file);
@@ -184,7 +188,7 @@ function CardModal({ onClose, onSaved, deckId, editing, toast, isDark }) {
                 onChange={(e) => { frontRef.current = e.target.value; }}
                 onBlur={(e) => setFrontStats(calcStats(e.target.value))} />
             </div>
-            <ImagePickerMemo label="Imagem (opcional)" value={frontImage} onChange={handleFrontImage} />
+            <ImagePickerMemo label="Imagem (opcional)" value={frontImage} onChange={handleFrontImage} onError={setError} />
             <AudioPickerMemo label="Áudio (opcional)"  value={frontAudio} onChange={handleFrontAudio} />
           </div>
 
@@ -202,7 +206,7 @@ function CardModal({ onClose, onSaved, deckId, editing, toast, isDark }) {
                 onChange={(e) => { backRef.current = e.target.value; }}
                 onBlur={(e) => setBackStats(calcStats(e.target.value))} />
             </div>
-            <ImagePickerMemo label="Imagem (opcional)" value={backImage}  onChange={handleBackImage} />
+            <ImagePickerMemo label="Imagem (opcional)" value={backImage}  onChange={handleBackImage} onError={setError} />
             <AudioPickerMemo label="Áudio (opcional)"  value={backAudio}  onChange={handleBackAudio} />
           </div>
 

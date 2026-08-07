@@ -47,7 +47,12 @@ function DeckModal({ onClose, onSaved, editing, toast, isDark }) {
   const handleFile = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) { alert('Imagem até 2MB.'); return; }
+    if (file.size > 2 * 1024 * 1024) {
+      setError('Imagem muito grande. Use uma de até 2MB.');
+      e.target.value = '';
+      return;
+    }
+    setError('');
     const reader = new FileReader();
     reader.onload = () => setForm((f) => ({ ...f, deckImage: reader.result }));
     reader.readAsDataURL(file);

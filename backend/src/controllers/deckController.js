@@ -145,9 +145,13 @@ exports.deleteDeck = async (req, res) => {
     const deck = await Deck.findById(req.params.id);
     if (!deck || deck.userId.toString() !== userId)
       return res.status(404).json({ message: 'Deck não encontrado.' });
-    await Flashcard.deleteMany({ deckId: deck._id });
-    await deck.deleteOne();
-    res.json({ message: 'Deck removido.' });
+    // Exclusao reversivel: marca a data e para por aqui. Os flashcards ficam
+    // intactos — antes eram apagados em massa antes do deck, e um clique errado
+    // destruia centenas de cards sem volta. O middleware do schema ja esconde
+    // decks marcados de toda consulta.
+    deck.deletedAt = new Date();
+    await deck.save();
+    res.json({ message: 'Deck movido para a lixeira.', deletedAt: deck.deletedAt });
   } catch (error) {
     res.status(500).json({ message: 'Erro ao excluir deck.' });
   }
@@ -291,5 +295,50 @@ exports.cloneSharedDeck = async (req, res) => {
   } catch (error) {
     console.error('cloneSharedDeck error:', error.message);
     res.status(500).json({ message: 'Erro ao clonar deck compartilhado.', error: error.message });
+  }
+};
+// @desc    Decks na lixeira
+// @route   GET /api/decks/trash
+exports.getTrash = async (req, res) => {
+  try {
+    // Cita deletedAt explicitamente, e o middleware do schema respeita o filtro.
+    const decks = await Deck.find({ userId: req.user.id, deletedAt: { $ne: null } })
+      .sort({ deletedAt: -1 }).lean();
+    const ids = decks.map((d) => d._id);
+    const counts = ids.length
+      ? await Flashcard.aggregate([{ $match: { deckId: { $in: ids } } }, { $group: { _id: '$deckId', total: { $sum: 1 } } }])
+      : [];
+    const mapa = new Map(counts.map((c) => [c._id.toString(), c.total]));
+    res.json(decks.map((d) => ({ ...d, flashcardCount: mapa.get(d._id.toString()) || 0 })));
+  } catch (error) {
+    res.status(500).json({ message: 'Erro ao carregar a lixeira.' });
+  }
+};
+
+// @desc    Restaurar deck da lixeira
+// @route   POST /api/decks/:id/restore
+exports.restoreDeck = async (req, res) => {
+  try {
+    const deck = await Deck.findOne({ _id: req.params.id, userId: req.user.id, deletedAt: { $ne: null } });
+    if (!deck) return res.status(404).json({ message: 'Deck não encontrado na lixeira.' });
+    deck.deletedAt = null;
+    await deck.save();
+    res.json({ message: 'Deck restaurado.', deck: deck.toObject() });
+  } catch (error) {
+    res.status(500).json({ message: 'Erro ao restaurar deck.' });
+  }
+};
+
+// @desc    Excluir definitivamente (agora sim, com os cards)
+// @route   DELETE /api/decks/:id/permanent
+exports.purgeDeck = async (req, res) => {
+  try {
+    const deck = await Deck.findOne({ _id: req.params.id, userId: req.user.id, deletedAt: { $ne: null } });
+    if (!deck) return res.status(404).json({ message: 'Deck não encontrado na lixeira.' });
+    await Flashcard.deleteMany({ deckId: deck._id });
+    await deck.deleteOne();
+    res.json({ message: 'Deck excluído definitivamente.' });
+  } catch (error) {
+    res.status(500).json({ message: 'Erro ao excluir definitivamente.' });
   }
 };
