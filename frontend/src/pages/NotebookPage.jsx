@@ -64,7 +64,6 @@ function SubjectModal({ onClose, onSaved, editing, toast, isDark }) {
           <div className="overflow-y-auto flex-1 px-6 py-5">
             {error && <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm px-4 py-3 rounded-lg mb-5">{error}</div>}
 
-            {/* Duas colunas no desktop: o formulário deixa de ser uma coluna alta */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
               <div className="sm:col-span-1">
                 <label className="block text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">Nome *</label>
@@ -107,7 +106,6 @@ function SubjectModal({ onClose, onSaved, editing, toast, isDark }) {
             </div>
           </div>
 
-          {/* Rodapé fixo: ações sempre visíveis, sem precisar rolar */}
           <div className={`flex flex-col-reverse sm:flex-row sm:justify-end gap-3 px-4 sm:px-6 py-4 border-t flex-shrink-0 ${isDark ? 'border-white/8' : 'border-black/6'}`}>
             <Button type="button" variant="secondary" size="lg" onClick={onClose}>Cancelar</Button>
             <Button type="submit" variant="primary" size="lg" loading={loading}
@@ -133,10 +131,9 @@ export default function NotebookPage() {
   const [editingSubject, setEditingSubject] = useState(null);
   const [confirmDeleteSubject, setConfirmDeleteSubject] = useState(null);
 
-  // --- UI/UX Improvements ---
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSemester, setSelectedSemester] = useState(localStorage.getItem('notebookSemesterFilter') || '');
-  const [layoutView, setLayoutView] = useState(localStorage.getItem('notebookLayoutView') || 'grid'); // 'grid' or 'list'
+  const [layoutView, setLayoutView] = useState(localStorage.getItem('notebookLayoutView') || 'grid');
 
   useEffect(() => {
     localStorage.setItem('notebookSemesterFilter', selectedSemester);
@@ -145,7 +142,6 @@ export default function NotebookPage() {
   useEffect(() => {
     localStorage.setItem('notebookLayoutView', layoutView);
   }, [layoutView]);
-  // --- End UI/UX Improvements ---
 
   useEffect(() => {
     const loadSubjects = async () => {
@@ -212,9 +208,15 @@ export default function NotebookPage() {
     <div className="min-h-screen" style={{ backgroundColor: 'var(--bg)' }}>
       <Navbar />
       <main className="max-w-3xl mx-auto px-4 pt-28 pb-16 relative z-10">
-        <h1 className={`text-3xl font-bold mb-8 ${isDark ? 'text-white' : 'text-slate-900'}`}>
-          Caderno
-        </h1>
+        <div className="flex items-center justify-between mb-8 gap-4">
+          <h1 className={`text-3xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+            Caderno
+          </h1>
+          <button onClick={() => { setEditingSubject(null); setShowSubjectModal(true); }}
+            className="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-4 py-2.5 rounded-xl transition-all flex items-center gap-2 text-sm flex-shrink-0">
+            <Plus size={16} /> Nova matéria
+          </button>
+        </div>
 
         {/* --- Filters and Layout Toggle --- */}
         {subjects.length > 0 && (
@@ -278,7 +280,7 @@ export default function NotebookPage() {
             <p className="text-slate-500 text-sm mb-5">
               Crie sua primeira matéria para organizar suas anotações e decks.
             </p>
-            <button onClick={() => setShowSubjectModal(true)}
+            <button onClick={() => { setEditingSubject(null); setShowSubjectModal(true); }}
               className="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-6 py-3 rounded-xl transition-all flex items-center gap-2 text-sm">
               <Plus size={16} /> Criar matéria
             </button>
@@ -326,7 +328,6 @@ export default function NotebookPage() {
                 ? 'border-white/5 hover:border-white/10'
                 : 'border-black/6 hover:border-black/12 shadow-sm';
 
-              // ─── Grid: card vertical ───────────────────────────────────────
               if (layoutView === 'grid') {
                 return (
                   <div key={subject._id} onClick={open}
@@ -360,7 +361,6 @@ export default function NotebookPage() {
                 );
               }
 
-              // ─── Lista: linha horizontal ───────────────────────────────────
               return (
                 <div key={subject._id} onClick={open}
                   className={`group relative flex items-center gap-4 p-4 rounded-2xl border cursor-pointer transition-all ${cardBorder} ${isDark ? 'hover:bg-white/2' : 'hover:bg-black/2'}`}>
